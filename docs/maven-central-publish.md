@@ -9,19 +9,17 @@
 - `CENTRAL_TOKEN_USERNAME`
 - `CENTRAL_TOKEN_PASSWORD`
 - `GPG_PRIVATE_KEY`
-- `GPG_PASSPHRASE`
 
 其中：
 
 - `CENTRAL_TOKEN_USERNAME` 和 `CENTRAL_TOKEN_PASSWORD` 来自 Sonatype Central Portal 的 User Token
 - `GPG_PRIVATE_KEY` 是 ASCII Armor 格式的私钥全文
-- `GPG_PASSPHRASE` 是私钥密码
 
-如果你创建的是无密码私钥，`GPG_PASSPHRASE` 可以留空，但不推荐。
+当前仓库工作流按“无密码私钥”配置，不再要求 `GPG_PASSPHRASE`。
 
 ## 2. 本地生成 GPG 密钥
 
-建议使用带密码的 RSA 4096 位密钥。
+建议使用无密码的 RSA 4096 位密钥，以匹配当前仓库的 GitHub Actions 发布流程。
 
 ```bash
 gpg --full-generate-key
@@ -61,8 +59,6 @@ gpg --armor --export-secret-keys 0123456789ABCDEF
 ```
 
 把完整输出内容复制到 GitHub Secret `GPG_PRIVATE_KEY`。
-
-私钥创建时输入的密码，就是 `GPG_PASSPHRASE`。
 
 ## 4. 可选：导出并上传公钥
 
