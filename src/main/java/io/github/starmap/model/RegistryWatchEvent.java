@@ -1,4 +1,4 @@
-package io.github.starmap.sdk.model;
+package io.github.starmap.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
@@ -25,6 +25,16 @@ public class RegistryWatchEvent {
     private String namespace;
 
     private String service;
+
+    private String organization;
+
+    private String businessDomain;
+
+    private String capabilityDomain;
+
+    private String application;
+
+    private String role;
 
     private String instanceId;
 

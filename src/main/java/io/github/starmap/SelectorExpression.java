@@ -1,4 +1,4 @@
-package io.github.starmap.sdk;
+package io.github.starmap;
 
 import java.util.Collection;
 import java.util.stream.Collectors;

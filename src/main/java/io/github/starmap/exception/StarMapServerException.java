@@ -1,6 +1,6 @@
-package io.github.starmap.sdk.exception;
+package io.github.starmap.exception;
 
-import io.github.starmap.sdk.model.StarMapErrorResponse;
+import io.github.starmap.model.StarMapErrorResponse;
 import lombok.Getter;
 
 /**

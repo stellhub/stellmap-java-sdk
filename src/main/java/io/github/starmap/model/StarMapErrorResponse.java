@@ -1,4 +1,4 @@
-package io.github.starmap.sdk.model;
+package io.github.starmap.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
@@ -7,18 +7,22 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * StarMap 注销请求。
+ * StarMap 统一错误响应。
  */
 @Data
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
-public class DeregisterRequest {
+public class StarMapErrorResponse {
 
-    private String namespace;
+    private String code;
 
-    private String service;
+    private String message;
 
-    private String instanceId;
+    private String requestId;
+
+    private Long leaderId;
+
+    private String leaderAddr;
 }

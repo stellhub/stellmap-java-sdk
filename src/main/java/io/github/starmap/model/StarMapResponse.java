@@ -1,4 +1,4 @@
-package io.github.starmap.sdk.model;
+package io.github.starmap.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;

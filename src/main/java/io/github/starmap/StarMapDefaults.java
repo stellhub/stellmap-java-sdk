@@ -1,4 +1,4 @@
-package io.github.starmap.sdk;
+package io.github.starmap;
 
 /**
  * StarMap SDK 默认值定义。

@@ -4,14 +4,14 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>io.github.jolinleaf</groupId>
+    <groupId>io.github.stellaraxis</groupId>
     <artifactId>starmap-java-sdk</artifactId>
     <version>0.0.1</version>
     <packaging>jar</packaging>
 
     <name>${project.groupId}:${project.artifactId}</name>
     <description>Java SDK for StarMap service registry, covering registration, heartbeat, discovery, and watch APIs.</description>
-    <url>https://github.com/jolinleaf/starmap-java-sdk</url>
+    <url>https://github.com/stellaraxis/starmap-java-sdk</url>
 
     <licenses>
         <license>
@@ -23,27 +23,29 @@
 
     <developers>
         <developer>
-            <id>jolinleaf</id>
-            <name>jolinleaf</name>
-            <email>xiaoyaoyunlian@gmail.com</email>
+            <id>stellaraxis</id>
+            <name>stellaraxis</name>
+            <email>stellaraxis.builder@gmail.com</email>
             <organization>GitHub</organization>
-            <organizationUrl>https://github.com/jolinleaf</organizationUrl>
+            <organizationUrl>https://github.com/stellaraxis</organizationUrl>
         </developer>
     </developers>
 
     <scm>
-        <connection>scm:git:https://github.com/jolinleaf/starmap-java-sdk.git</connection>
-        <developerConnection>scm:git:git@github.com:jolinleaf/starmap-java-sdk.git</developerConnection>
-        <url>https://github.com/jolinleaf/starmap-java-sdk</url>
+        <connection>scm:git:https://github.com/stellaraxis/starmap-java-sdk.git</connection>
+        <developerConnection>scm:git:git@github.com:stellaraxis/starmap-java-sdk.git</developerConnection>
+        <url>https://github.com/stellaraxis/starmap-java-sdk</url>
         <tag>HEAD</tag>
     </scm>
 
     <properties>
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
-        <jackson.version>2.20.0</jackson.version>
+        <jackson.version>2.21.2</jackson.version>
         <junit.version>5.13.4</junit.version>
-        <lombok.version>1.18.42</lombok.version>
+        <lombok.version>1.18.44</lombok.version>
+        <netty.version>4.1.132.Final</netty.version>
+        <opentelemetry.version>1.60.1</opentelemetry.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <project.build.outputTimestamp>2026-04-14T00:00:00Z</project.build.outputTimestamp>
@@ -62,6 +64,26 @@
             <version>${jackson.version}</version>
         </dependency>
         <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-codec-http</artifactId>
+            <version>${netty.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-handler</artifactId>
+            <version>${netty.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-api</artifactId>
+            <version>${opentelemetry.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>2.0.17</version>
+        </dependency>
+        <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>${lombok.version}</version>
@@ -71,6 +93,12 @@
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>2.0.17</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -97,6 +125,46 @@
                 <version>3.5.4</version>
                 <configuration>
                     <useModulePath>false</useModulePath>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <formats>
+                        <!-- you can define as many formats as you want, each is independent -->
+                        <format>
+                            <!-- define the files to apply to -->
+                            <includes>
+                                <include>*.md</include>
+                                <include>.gitignore</include>
+                            </includes>
+                            <!-- define the steps to apply to those files -->
+                            <trimTrailingWhitespace />
+                            <endWithNewline />
+                        </format>
+                    </formats>
+                    <!-- define a language-specific format -->
+                    <java>
+                        <!-- apply a specific flavor of google-java-format and reflow long strings -->
+                        <googleJavaFormat>
+                            <version>1.35.0</version>
+                            <style>GOOGLE</style>
+                            <reflowLongStrings>true</reflowLongStrings>
+                        </googleJavaFormat>
+                        <indent>
+                            <tabs>true</tabs>
+                            <spacesPerTab>2</spacesPerTab>
+                        </indent>
+                        <indent>
+                            <spaces>true</spaces>
+                            <spacesPerTab>4</spacesPerTab>
+                        </indent>
+                        <importOrder />
+                        <removeUnusedImports />
+                        <formatAnnotations />
+                    </java>
                 </configuration>
             </plugin>
         </plugins>
@@ -153,6 +221,7 @@
                         </executions>
                         <configuration>
                             <bestPractices>true</bestPractices>
+                            <keyname>3063C3A3F03FE483526EEDAFDC495D07B623C2EA</keyname>
                             <gpgArguments>
                                 <arg>--pinentry-mode</arg>
                                 <arg>loopback</arg>

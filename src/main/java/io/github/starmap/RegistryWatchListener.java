@@ -1,6 +1,6 @@
-package io.github.starmap.sdk;
+package io.github.starmap;
 
-import io.github.starmap.sdk.model.RegistryWatchEvent;
+import io.github.starmap.model.RegistryWatchEvent;
 
 /**
  * StarMap watch 监听器。

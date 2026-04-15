@@ -44,7 +44,7 @@ gpg --list-secret-keys --keyid-format LONG
 ```text
 sec   rsa4096/0123456789ABCDEF 2026-04-14 [SC]
       1111222233334444555566667777888899990000
-uid                 [ultimate] jolinleaf <xiaoyaoyunlian@gmail.com>
+uid                 [ultimate] stellaraxis <xiaoyaoyunlian@gmail.com>
 ssb   rsa4096/FEDCBA9876543210 2026-04-14 [E]
 ```
 

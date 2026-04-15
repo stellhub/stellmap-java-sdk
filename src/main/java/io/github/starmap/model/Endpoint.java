@@ -1,4 +1,4 @@
-package io.github.starmap.sdk.model;
+package io.github.starmap.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
@@ -7,22 +7,24 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * StarMap 统一错误响应。
+ * StarMap 实例端点模型。
  */
 @Data
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
-public class StarMapErrorResponse {
+public class Endpoint {
 
-    private String code;
+    private String name;
 
-    private String message;
+    private String protocol;
 
-    private String requestId;
+    private String host;
 
-    private Long leaderId;
+    private int port;
 
-    private String leaderAddr;
+    private String path;
+
+    private int weight;
 }

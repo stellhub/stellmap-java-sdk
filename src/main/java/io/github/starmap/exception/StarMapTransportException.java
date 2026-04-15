@@ -1,4 +1,4 @@
-package io.github.starmap.sdk.exception;
+package io.github.starmap.exception;
 
 /**
  * StarMap 传输层异常。
