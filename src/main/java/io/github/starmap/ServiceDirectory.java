@@ -1,13 +1,10 @@
 package io.github.starmap;
 
 import io.github.starmap.model.RegistryInstance;
-
 import java.util.List;
 import java.util.Map;
 
-/**
- * StarMap 本地服务目录只读视图。
- */
+/** StarMap 本地服务目录只读视图。 */
 public interface ServiceDirectory {
 
     /**

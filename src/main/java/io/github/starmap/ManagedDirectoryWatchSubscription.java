@@ -12,9 +12,6 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpClientCodec;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.net.URI;
 import java.time.Duration;
 import java.util.Objects;
@@ -26,13 +23,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/**
- * 带本地目录缓存的受管 watch 订阅。
- */
+/** 带本地目录缓存的受管 watch 订阅。 */
 final class ManagedDirectoryWatchSubscription implements ServiceDirectorySubscription {
 
-    private static final Logger log = LoggerFactory.getLogger(ManagedDirectoryWatchSubscription.class);
+    private static final Logger log =
+            LoggerFactory.getLogger(ManagedDirectoryWatchSubscription.class);
 
     private final StarMapClient owner;
     private final NettyHttpTransport transport;
@@ -45,13 +43,15 @@ final class ManagedDirectoryWatchSubscription implements ServiceDirectorySubscri
     private final AtomicBoolean closed = new AtomicBoolean(false);
     private final AtomicBoolean terminated = new AtomicBoolean(false);
     private final AtomicBoolean initialConnected = new AtomicBoolean(false);
-    private final CompletableFuture<ServiceDirectorySubscription> initialOpenFuture = new CompletableFuture<>();
+    private final CompletableFuture<ServiceDirectorySubscription> initialOpenFuture =
+            new CompletableFuture<>();
     private final AtomicLong lastRevision;
     private final AtomicInteger reconnectAttempts = new AtomicInteger(0);
     private final AtomicLong trackedServiceCount = new AtomicLong(0L);
     private final AtomicLong trackedInstanceCount = new AtomicLong(0L);
 
-    ManagedDirectoryWatchSubscription(StarMapClient owner, RegistryWatchRequest request, RegistryWatchListener listener) {
+    ManagedDirectoryWatchSubscription(
+            StarMapClient owner, RegistryWatchRequest request, RegistryWatchListener listener) {
         this.owner = Objects.requireNonNull(owner, "owner must not be null");
         this.transport = owner.transportInternal();
         this.request = Objects.requireNonNull(request, "request must not be null");
@@ -118,12 +118,18 @@ final class ManagedDirectoryWatchSubscription implements ServiceDirectorySubscri
         initialConnected.set(true);
         if (initialOpenFuture.complete(this)) {
             owner.clientMetrics().recordWatchSubscriptionOpened();
-            log.info("Opened watch subscription namespace={}, services={}, servicePrefixes={}",
-                    request.getNamespace(), request.getServices(), request.getServicePrefixes());
+            log.info(
+                    "Opened watch subscription namespace={}, services={}, servicePrefixes={}",
+                    request.getNamespace(),
+                    request.getServices(),
+                    request.getServicePrefixes());
             dispatcher.dispatch(listener::onOpen);
             return;
         }
-        log.debug("Reconnected watch subscription namespace={}, revision={}", request.getNamespace(), effectiveSinceRevision());
+        log.debug(
+                "Reconnected watch subscription namespace={}, revision={}",
+                request.getNamespace(),
+                effectiveSinceRevision());
         dispatcher.dispatch(listener::onOpen);
     }
 
@@ -139,9 +145,16 @@ final class ManagedDirectoryWatchSubscription implements ServiceDirectorySubscri
         directory.apply(event);
         syncDirectoryMetrics();
         owner.clientMetrics().recordWatchEvent(event.getType());
-        log.debug("Applied watch event namespace={}, service={}, type={}, revision={}, directoryRevision={}, serviceCount={}, instanceCount={}",
-                event.getNamespace(), event.getService(), event.getType(), event.getRevision(),
-                directory.getDirectoryRevision(), trackedServiceCount.get(), trackedInstanceCount.get());
+        log.debug(
+                "Applied watch event namespace={}, service={}, type={}, revision={}, directoryRevision={},"
+                        + " serviceCount={}, instanceCount={}",
+                event.getNamespace(),
+                event.getService(),
+                event.getType(),
+                event.getRevision(),
+                directory.getDirectoryRevision(),
+                trackedServiceCount.get(),
+                trackedInstanceCount.get());
         dispatcher.dispatch(() -> listener.onEvent(event));
     }
 
@@ -152,18 +165,21 @@ final class ManagedDirectoryWatchSubscription implements ServiceDirectorySubscri
         dispatcher.dispatch(() -> listener.onError(throwable));
     }
 
-    void handleStreamClosed(Channel channel, boolean reconnectAttempt, boolean streamOpened, Throwable failure) {
+    void handleStreamClosed(
+            Channel channel, boolean reconnectAttempt, boolean streamOpened, Throwable failure) {
         channelRef.compareAndSet(channel, null);
         if (closed.get()) {
             terminate();
             return;
         }
 
-        Throwable actualFailure = failure != null
-                ? failure
-                : new StarMapTransportException(streamOpened
-                ? "StarMap watch stream disconnected"
-                : "Connection closed before StarMap watch stream was established");
+        Throwable actualFailure =
+                failure != null
+                        ? failure
+                        : new StarMapTransportException(
+                                streamOpened
+                                        ? "StarMap watch stream disconnected"
+                                        : "Connection closed before StarMap watch stream was established");
 
         if (!streamOpened && !initialConnected.get() && !reconnectAttempt) {
             initialOpenFuture.completeExceptionally(actualFailure);
@@ -182,28 +198,49 @@ final class ManagedDirectoryWatchSubscription implements ServiceDirectorySubscri
         }
         long sinceRevision = effectiveSinceRevision();
         boolean includeSnapshot = shouldIncludeSnapshot(sinceRevision);
-        URI watchUri = transport.resolve(
-                owner.baseUriInternal(),
-                "/api/v1/registry/watch" + owner.requestNormalizerInternal().buildWatchQuery(request, sinceRevision, includeSnapshot)
-        );
-        Bootstrap bootstrap = transport.newBootstrap(new ChannelInitializer<>() {
-            @Override
-            protected void initChannel(SocketChannel channel) {
-                ChannelPipeline pipeline = channel.pipeline();
-                transport.configureSsl(channel, watchUri, pipeline);
-                pipeline.addLast(new HttpClientCodec());
-                pipeline.addLast(new WatchResponseHandler(owner, ManagedDirectoryWatchSubscription.this, transport.buildWatchRequest(watchUri), reconnectAttempt));
-            }
-        });
-        log.debug("Opening watch stream namespace={}, services={}, servicePrefixes={}, sinceRevision={}, includeSnapshot={}, reconnectAttempt={}",
-                request.getNamespace(), request.getServices(), request.getServicePrefixes(), sinceRevision, includeSnapshot, reconnectAttempt);
+        URI watchUri =
+                transport.resolve(
+                        owner.baseUriInternal(),
+                        "/api/v1/registry/watch"
+                                + owner
+                                        .requestNormalizerInternal()
+                                        .buildWatchQuery(request, sinceRevision, includeSnapshot));
+        Bootstrap bootstrap =
+                transport.newBootstrap(
+                        new ChannelInitializer<>() {
+                            @Override
+                            protected void initChannel(SocketChannel channel) {
+                                ChannelPipeline pipeline = channel.pipeline();
+                                transport.configureSsl(channel, watchUri, pipeline);
+                                pipeline.addLast(new HttpClientCodec());
+                                pipeline.addLast(
+                                        new WatchResponseHandler(
+                                                owner,
+                                                ManagedDirectoryWatchSubscription.this,
+                                                transport.buildWatchRequest(watchUri),
+                                                reconnectAttempt));
+                            }
+                        });
+        log.debug(
+                "Opening watch stream namespace={}, services={}, servicePrefixes={}, sinceRevision={},"
+                        + " includeSnapshot={}, reconnectAttempt={}",
+                request.getNamespace(),
+                request.getServices(),
+                request.getServicePrefixes(),
+                sinceRevision,
+                includeSnapshot,
+                reconnectAttempt);
 
         ChannelFuture connectFuture = bootstrap.connect(watchUri.getHost(), transport.portOf(watchUri));
-        connectFuture.addListener(future -> {
-            if (!future.isSuccess()) {
-                handleConnectAttemptFailed(reconnectAttempt, new StarMapTransportException("Failed to open StarMap watch stream", future.cause()));
-            }
-        });
+        connectFuture.addListener(
+                future -> {
+                    if (!future.isSuccess()) {
+                        handleConnectAttemptFailed(
+                                reconnectAttempt,
+                                new StarMapTransportException(
+                                        "Failed to open StarMap watch stream", future.cause()));
+                    }
+                });
     }
 
     private void handleReconnectableFailure(Throwable failure) {
@@ -215,31 +252,52 @@ final class ManagedDirectoryWatchSubscription implements ServiceDirectorySubscri
             lastRevision.set(0L);
             directory.clear();
             syncDirectoryMetrics();
-            log.warn("Resetting watch revision and directory cache namespace={} due to failure={}",
-                    request.getNamespace(), failure.toString());
+            log.warn(
+                    "Resetting watch revision and directory cache namespace={} due to failure={}",
+                    request.getNamespace(),
+                    failure.toString());
         }
         if (!owner.watchAutoReconnectEnabled()) {
-            log.warn("Watch subscription terminated without auto reconnect namespace={}, failure={}",
-                    request.getNamespace(), failure.toString());
+            log.warn(
+                    "Watch subscription terminated without auto reconnect namespace={}, failure={}",
+                    request.getNamespace(),
+                    failure.toString());
             dispatcher.dispatch(() -> listener.onError(failure));
             terminate();
             return;
         }
 
         int attempt = reconnectAttempts.incrementAndGet();
-        if (owner.watchReconnectMaxAttemptsInternal() >= 0 && attempt > owner.watchReconnectMaxAttemptsInternal()) {
-            log.error("Watch reconnect attempts exhausted namespace={}, attempts={}", request.getNamespace(), attempt, failure);
-            dispatcher.dispatch(() -> listener.onError(new StarMapTransportException("StarMap watch reconnect attempts exhausted", failure)));
+        if (owner.watchReconnectMaxAttemptsInternal() >= 0
+                && attempt > owner.watchReconnectMaxAttemptsInternal()) {
+            log.error(
+                    "Watch reconnect attempts exhausted namespace={}, attempts={}",
+                    request.getNamespace(),
+                    attempt,
+                    failure);
+            dispatcher.dispatch(
+                    () ->
+                            listener.onError(
+                                    new StarMapTransportException(
+                                            "StarMap watch reconnect attempts exhausted", failure)));
             terminate();
             return;
         }
 
         Duration delay = calculateReconnectDelay(attempt);
         owner.clientMetrics().recordWatchReconnect(attempt, failure);
-        log.warn("Scheduling watch reconnect namespace={}, attempt={}, delayMs={}, failure={}",
-                request.getNamespace(), attempt, delay.toMillis(), failure.toString());
+        log.warn(
+                "Scheduling watch reconnect namespace={}, attempt={}, delayMs={}, failure={}",
+                request.getNamespace(),
+                attempt,
+                delay.toMillis(),
+                failure.toString());
         dispatcher.dispatch(() -> listener.onError(failure));
-        ScheduledFuture<?> reconnectFuture = owner.eventLoopGroupInternal().next().schedule(() -> connect(true), delay.toMillis(), TimeUnit.MILLISECONDS);
+        ScheduledFuture<?> reconnectFuture =
+                owner
+                        .eventLoopGroupInternal()
+                        .next()
+                        .schedule(() -> connect(true), delay.toMillis(), TimeUnit.MILLISECONDS);
         replaceReconnectFuture(reconnectFuture);
     }
 
@@ -314,21 +372,26 @@ final class ManagedDirectoryWatchSubscription implements ServiceDirectorySubscri
             channel.close();
         }
         if (!initialOpenFuture.isDone()) {
-            initialOpenFuture.completeExceptionally(new StarMapTransportException("StarMap watch subscription closed"));
+            initialOpenFuture.completeExceptionally(
+                    new StarMapTransportException("StarMap watch subscription closed"));
         }
         if (initialConnected.get()) {
             resetDirectoryMetrics();
             owner.clientMetrics().recordWatchSubscriptionClosed();
         }
-        log.info("Closed watch subscription namespace={}, services={}, servicePrefixes={}",
-                request.getNamespace(), request.getServices(), request.getServicePrefixes());
+        log.info(
+                "Closed watch subscription namespace={}, services={}, servicePrefixes={}",
+                request.getNamespace(),
+                request.getServices(),
+                request.getServicePrefixes());
         dispatcher.dispatch(listener::onClosed);
     }
 
     private void syncDirectoryMetrics() {
         DefaultServiceDirectory.DirectoryStats stats = directory.stats();
         long serviceDelta = stats.serviceCount() - trackedServiceCount.getAndSet(stats.serviceCount());
-        long instanceDelta = stats.instanceCount() - trackedInstanceCount.getAndSet(stats.instanceCount());
+        long instanceDelta =
+                stats.instanceCount() - trackedInstanceCount.getAndSet(stats.instanceCount());
         owner.clientMetrics().recordDirectoryStateDelta(serviceDelta, instanceDelta);
     }
 

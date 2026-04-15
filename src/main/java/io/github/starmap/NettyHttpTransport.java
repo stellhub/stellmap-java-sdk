@@ -15,8 +15,8 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -31,9 +31,6 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.ssl.SslContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -44,10 +41,10 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/**
- * 基于 Netty 的 HTTP 传输层，负责请求发送、响应聚合与 leader 跟随重试。
- */
+/** 基于 Netty 的 HTTP 传输层，负责请求发送、响应聚合与 leader 跟随重试。 */
 final class NettyHttpTransport {
 
     private static final Logger log = LoggerFactory.getLogger(NettyHttpTransport.class);
@@ -70,11 +67,11 @@ final class NettyHttpTransport {
             Map<String, String> defaultHeaders,
             SslContext sslContext,
             StarMapClientMetrics metrics,
-            boolean followLeaderRedirect
-    ) {
+            boolean followLeaderRedirect) {
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper must not be null");
         this.eventLoopGroup = Objects.requireNonNull(eventLoopGroup, "eventLoopGroup must not be null");
-        this.bootstrapTemplate = Objects.requireNonNull(bootstrapTemplate, "bootstrapTemplate must not be null");
+        this.bootstrapTemplate =
+                Objects.requireNonNull(bootstrapTemplate, "bootstrapTemplate must not be null");
         this.requestTimeout = Objects.requireNonNull(requestTimeout, "requestTimeout must not be null");
         this.defaultHeaders = Objects.requireNonNull(defaultHeaders, "defaultHeaders must not be null");
         this.sslContext = Objects.requireNonNull(sslContext, "sslContext must not be null");
@@ -89,20 +86,24 @@ final class NettyHttpTransport {
             Object requestBody,
             JavaType responseType,
             boolean enableLeaderRedirect,
-            int redirectsRemaining
-    ) {
+            int redirectsRemaining) {
         URI requestUri = resolve(requestBaseUri, path);
         byte[] bodyBytes = "GET".equals(method) ? null : toJsonBytes(requestBody);
-        NettyHttpResponse response = executeRequest(method, requestUri, bodyBytes, "application/json", "application/json");
+        NettyHttpResponse response =
+                executeRequest(method, requestUri, bodyBytes, "application/json", "application/json");
 
         try {
             if (isSuccess(response.statusCode())) {
-                log.debug("StarMap request succeeded method={}, path={}, status={}",
-                        method, requestUri.getPath(), response.statusCode());
+                log.debug(
+                        "StarMap request succeeded method={}, path={}, status={}",
+                        method,
+                        requestUri.getPath(),
+                        response.statusCode());
                 return objectMapper.readValue(response.body(), responseType);
             }
 
-            StarMapServerException exception = buildServerException(response.statusCode(), response.body());
+            StarMapServerException exception =
+                    buildServerException(response.statusCode(), response.body());
             StarMapErrorResponse errorResponse = exception.getErrorResponse();
             if (enableLeaderRedirect
                     && followLeaderRedirect
@@ -110,8 +111,13 @@ final class NettyHttpTransport {
                     && errorResponse != null
                     && "not_leader".equals(errorResponse.getCode())
                     && hasText(errorResponse.getLeaderAddr())) {
-                log.info("Redirecting StarMap write request to leader method={}, path={}, leaderAddr={}, redirectsRemaining={}",
-                        method, requestUri.getPath(), errorResponse.getLeaderAddr(), redirectsRemaining);
+                log.info(
+                        "Redirecting StarMap write request to leader method={}, path={}, leaderAddr={},"
+                                + " redirectsRemaining={}",
+                        method,
+                        requestUri.getPath(),
+                        errorResponse.getLeaderAddr(),
+                        redirectsRemaining);
                 return executeJson(
                         method,
                         toLeaderBaseUri(requestBaseUri, errorResponse.getLeaderAddr()),
@@ -119,14 +125,18 @@ final class NettyHttpTransport {
                         requestBody,
                         responseType,
                         true,
-                        redirectsRemaining - 1
-                );
+                        redirectsRemaining - 1);
             }
-            log.warn("StarMap request failed method={}, path={}, status={}, code={}",
-                    method, requestUri.getPath(), response.statusCode(), errorResponse == null ? null : errorResponse.getCode());
+            log.warn(
+                    "StarMap request failed method={}, path={}, status={}, code={}",
+                    method,
+                    requestUri.getPath(),
+                    response.statusCode(),
+                    errorResponse == null ? null : errorResponse.getCode());
             throw exception;
         } catch (JsonProcessingException e) {
-            log.warn("Failed to decode StarMap response method={}, path={}", method, requestUri.getPath(), e);
+            log.warn(
+                    "Failed to decode StarMap response method={}, path={}", method, requestUri.getPath(), e);
             throw new StarMapTransportException("Failed to decode StarMap response", e);
         }
     }
@@ -138,7 +148,9 @@ final class NettyHttpTransport {
     }
 
     HttpRequest buildWatchRequest(URI requestUri) {
-        FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, requestTarget(requestUri), Unpooled.EMPTY_BUFFER);
+        FullHttpRequest request =
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1, HttpMethod.GET, requestTarget(requestUri), Unpooled.EMPTY_BUFFER);
         HttpHeaders headers = request.headers();
         headers.set(HttpHeaderNames.HOST, hostHeader(requestUri));
         headers.set(HttpHeaderNames.ACCEPT, "text/event-stream");
@@ -151,7 +163,8 @@ final class NettyHttpTransport {
 
     void configureSsl(SocketChannel channel, URI requestUri, ChannelPipeline pipeline) {
         if (isHttps(requestUri)) {
-            pipeline.addLast(sslContext.newHandler(channel.alloc(), requestUri.getHost(), portOf(requestUri)));
+            pipeline.addLast(
+                    sslContext.newHandler(channel.alloc(), requestUri.getHost(), portOf(requestUri)));
         }
     }
 
@@ -168,12 +181,14 @@ final class NettyHttpTransport {
 
     StarMapServerException buildServerException(int statusCode, String body) {
         try {
-            StarMapErrorResponse errorResponse = body == null || body.isBlank()
-                    ? StarMapErrorResponse.builder().build()
-                    : objectMapper.readValue(body, StarMapErrorResponse.class);
+            StarMapErrorResponse errorResponse =
+                    body == null || body.isBlank()
+                            ? StarMapErrorResponse.builder().build()
+                            : objectMapper.readValue(body, StarMapErrorResponse.class);
             return new StarMapServerException(statusCode, errorResponse);
         } catch (JsonProcessingException e) {
-            return new StarMapServerException(statusCode, StarMapErrorResponse.builder().message(body).build());
+            return new StarMapServerException(
+                    statusCode, StarMapErrorResponse.builder().message(body).build());
         }
     }
 
@@ -191,33 +206,52 @@ final class NettyHttpTransport {
         return new StarMapTransportException(message, cause);
     }
 
-    private NettyHttpResponse executeRequest(String method, URI requestUri, byte[] requestBody, String acceptHeader, String contentTypeHeader) {
+    private NettyHttpResponse executeRequest(
+            String method,
+            URI requestUri,
+            byte[] requestBody,
+            String acceptHeader,
+            String contentTypeHeader) {
         long startNanos = System.nanoTime();
         CompletableFuture<NettyHttpResponse> responseFuture = new CompletableFuture<>();
         AtomicReference<Channel> channelRef = new AtomicReference<>();
-        Bootstrap bootstrap = newBootstrap(new ChannelInitializer<>() {
-            @Override
-            protected void initChannel(SocketChannel channel) {
-                channelRef.set(channel);
-                ChannelPipeline pipeline = channel.pipeline();
-                configureSsl(channel, requestUri, pipeline);
-                pipeline.addLast(new HttpClientCodec());
-                pipeline.addLast(new HttpObjectAggregator(MAX_RESPONSE_BYTES));
-                pipeline.addLast(new AggregatedResponseHandler(buildJsonRequest(method, requestUri, requestBody, acceptHeader, contentTypeHeader), responseFuture));
-            }
-        });
+        Bootstrap bootstrap =
+                newBootstrap(
+                        new ChannelInitializer<>() {
+                            @Override
+                            protected void initChannel(SocketChannel channel) {
+                                channelRef.set(channel);
+                                ChannelPipeline pipeline = channel.pipeline();
+                                configureSsl(channel, requestUri, pipeline);
+                                pipeline.addLast(new HttpClientCodec());
+                                pipeline.addLast(new HttpObjectAggregator(MAX_RESPONSE_BYTES));
+                                pipeline.addLast(
+                                        new AggregatedResponseHandler(
+                                                buildJsonRequest(
+                                                        method, requestUri, requestBody, acceptHeader, contentTypeHeader),
+                                                responseFuture));
+                            }
+                        });
 
         ChannelFuture connectFuture = bootstrap.connect(requestUri.getHost(), portOf(requestUri));
-        connectFuture.addListener(future -> {
-            if (!future.isSuccess()) {
-                responseFuture.completeExceptionally(new StarMapTransportException("Failed to call StarMap HTTP API", future.cause()));
-            }
-        });
+        connectFuture.addListener(
+                future -> {
+                    if (!future.isSuccess()) {
+                        responseFuture.completeExceptionally(
+                                new StarMapTransportException("Failed to call StarMap HTTP API", future.cause()));
+                    }
+                });
 
-        ScheduledFuture<?> timeoutFuture = scheduleTimeout(responseFuture, channelRef, "Timed out while calling StarMap HTTP API");
+        ScheduledFuture<?> timeoutFuture =
+                scheduleTimeout(responseFuture, channelRef, "Timed out while calling StarMap HTTP API");
         try {
             NettyHttpResponse response = responseFuture.get();
-            metrics.recordRequest(method, requestUri.getPath(), response.statusCode(), System.nanoTime() - startNanos, isSuccess(response.statusCode()));
+            metrics.recordRequest(
+                    method,
+                    requestUri.getPath(),
+                    response.statusCode(),
+                    System.nanoTime() - startNanos,
+                    isSuccess(response.statusCode()));
             return response;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -226,27 +260,42 @@ final class NettyHttpTransport {
             throw new StarMapTransportException("Interrupted while calling StarMap HTTP API", e);
         } catch (ExecutionException e) {
             metrics.recordRequest(method, requestUri.getPath(), 0, System.nanoTime() - startNanos, false);
-            log.warn("StarMap request execution failed method={}, uri={}", method, requestUri, e.getCause());
+            log.warn(
+                    "StarMap request execution failed method={}, uri={}", method, requestUri, e.getCause());
             throw unwrapAsTransport(e.getCause(), "Failed to call StarMap HTTP API");
         } finally {
             timeoutFuture.cancel(false);
         }
     }
 
-    private ScheduledFuture<?> scheduleTimeout(CompletableFuture<?> future, AtomicReference<Channel> channelRef, String message) {
-        return eventLoopGroup.next().schedule(() -> {
-            if (future.completeExceptionally(new StarMapTransportException(message))) {
-                Channel channel = channelRef.get();
-                if (channel != null) {
-                    channel.close();
-                }
-            }
-        }, requestTimeout.toMillis(), TimeUnit.MILLISECONDS);
+    private ScheduledFuture<?> scheduleTimeout(
+            CompletableFuture<?> future, AtomicReference<Channel> channelRef, String message) {
+        return eventLoopGroup
+                .next()
+                .schedule(
+                        () -> {
+                            if (future.completeExceptionally(new StarMapTransportException(message))) {
+                                Channel channel = channelRef.get();
+                                if (channel != null) {
+                                    channel.close();
+                                }
+                            }
+                        },
+                        requestTimeout.toMillis(),
+                        TimeUnit.MILLISECONDS);
     }
 
-    private FullHttpRequest buildJsonRequest(String method, URI requestUri, byte[] requestBody, String acceptHeader, String contentTypeHeader) {
-        ByteBuf content = requestBody == null ? Unpooled.EMPTY_BUFFER : Unpooled.wrappedBuffer(requestBody);
-        FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.valueOf(method), requestTarget(requestUri), content);
+    private FullHttpRequest buildJsonRequest(
+            String method,
+            URI requestUri,
+            byte[] requestBody,
+            String acceptHeader,
+            String contentTypeHeader) {
+        ByteBuf content =
+                requestBody == null ? Unpooled.EMPTY_BUFFER : Unpooled.wrappedBuffer(requestBody);
+        FullHttpRequest request =
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1, HttpMethod.valueOf(method), requestTarget(requestUri), content);
         HttpHeaders headers = request.headers();
         headers.set(HttpHeaderNames.HOST, hostHeader(requestUri));
         headers.set(HttpHeaderNames.ACCEPT, acceptHeader);
@@ -289,7 +338,8 @@ final class NettyHttpTransport {
 
     private String hostHeader(URI requestUri) {
         int port = portOf(requestUri);
-        boolean defaultPort = (!isHttps(requestUri) && port == 80) || (isHttps(requestUri) && port == 443);
+        boolean defaultPort =
+                (!isHttps(requestUri) && port == 80) || (isHttps(requestUri) && port == 443);
         return defaultPort ? requestUri.getHost() : requestUri.getHost() + ":" + port;
     }
 
@@ -306,25 +356,32 @@ final class NettyHttpTransport {
         return value != null && !value.trim().isEmpty();
     }
 
-    private static final class AggregatedResponseHandler extends SimpleChannelInboundHandler<FullHttpResponse> {
+    private static final class AggregatedResponseHandler
+            extends SimpleChannelInboundHandler<FullHttpResponse> {
 
         private final FullHttpRequest request;
         private final CompletableFuture<NettyHttpResponse> responseFuture;
         private boolean responseReceived;
 
-        private AggregatedResponseHandler(FullHttpRequest request, CompletableFuture<NettyHttpResponse> responseFuture) {
+        private AggregatedResponseHandler(
+                FullHttpRequest request, CompletableFuture<NettyHttpResponse> responseFuture) {
             this.request = request;
             this.responseFuture = responseFuture;
         }
 
         @Override
         public void channelActive(ChannelHandlerContext context) {
-            context.writeAndFlush(request).addListener(future -> {
-                if (!future.isSuccess()) {
-                    responseFuture.completeExceptionally(new StarMapTransportException("Failed to send StarMap HTTP request", future.cause()));
-                    context.close();
-                }
-            });
+            context
+                    .writeAndFlush(request)
+                    .addListener(
+                            future -> {
+                                if (!future.isSuccess()) {
+                                    responseFuture.completeExceptionally(
+                                            new StarMapTransportException(
+                                                    "Failed to send StarMap HTTP request", future.cause()));
+                                    context.close();
+                                }
+                            });
         }
 
         @Override
@@ -338,17 +395,18 @@ final class NettyHttpTransport {
         @Override
         public void channelInactive(ChannelHandlerContext context) {
             if (!responseReceived) {
-                responseFuture.completeExceptionally(new StarMapTransportException("Connection closed before receiving StarMap response"));
+                responseFuture.completeExceptionally(
+                        new StarMapTransportException("Connection closed before receiving StarMap response"));
             }
         }
 
         @Override
         public void exceptionCaught(ChannelHandlerContext context, Throwable cause) {
-            responseFuture.completeExceptionally(new StarMapTransportException("Failed to call StarMap HTTP API", cause));
+            responseFuture.completeExceptionally(
+                    new StarMapTransportException("Failed to call StarMap HTTP API", cause));
             context.close();
         }
     }
 
-    private record NettyHttpResponse(int statusCode, String body) {
-    }
+    private record NettyHttpResponse(int statusCode, String body) {}
 }

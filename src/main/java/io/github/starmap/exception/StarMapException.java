@@ -1,8 +1,6 @@
 package io.github.starmap.exception;
 
-/**
- * StarMap SDK 基础异常。
- */
+/** StarMap SDK 基础异常。 */
 public class StarMapException extends RuntimeException {
 
     public StarMapException(String message) {

@@ -3,13 +3,10 @@ package io.github.starmap;
 import java.util.Collection;
 import java.util.stream.Collectors;
 
-/**
- * StarMap selector 表达式构造器。
- */
+/** StarMap selector 表达式构造器。 */
 public final class SelectorExpression {
 
-    private SelectorExpression() {
-    }
+    private SelectorExpression() {}
 
     /**
      * 构造存在性表达式，例如 version。
@@ -80,10 +77,11 @@ public final class SelectorExpression {
             throw new IllegalArgumentException("selector values must not be empty");
         }
 
-        String joined = values.stream()
-                .map(value -> requireText(value, "selector value"))
-                .distinct()
-                .collect(Collectors.joining(","));
+        String joined =
+                values.stream()
+                        .map(value -> requireText(value, "selector value"))
+                        .distinct()
+                        .collect(Collectors.joining(","));
         if (joined.isBlank()) {
             throw new IllegalArgumentException("selector values must not be empty");
         }

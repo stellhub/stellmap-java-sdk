@@ -3,12 +3,9 @@ package io.github.starmap;
 import io.github.starmap.model.DeregisterRequest;
 import io.github.starmap.model.HeartbeatRequest;
 import io.github.starmap.model.RegisterRequest;
-
 import java.util.Objects;
 
-/**
- * 注册实例唯一键。
- */
+/** 注册实例唯一键。 */
 final class RegistrationKey {
 
     private final String namespace;
@@ -28,7 +25,8 @@ final class RegistrationKey {
      * @return 注册唯一键
      */
     static RegistrationKey from(RegisterRequest request) {
-        return new RegistrationKey(request.getNamespace(), request.getService(), request.getInstanceId());
+        return new RegistrationKey(
+                request.getNamespace(), request.getService(), request.getInstanceId());
     }
 
     /**
@@ -38,7 +36,8 @@ final class RegistrationKey {
      * @return 注册唯一键
      */
     static RegistrationKey from(DeregisterRequest request) {
-        return new RegistrationKey(request.getNamespace(), request.getService(), request.getInstanceId());
+        return new RegistrationKey(
+                request.getNamespace(), request.getService(), request.getInstanceId());
     }
 
     /**
@@ -48,7 +47,8 @@ final class RegistrationKey {
      * @return 注册唯一键
      */
     static RegistrationKey from(HeartbeatRequest request) {
-        return new RegistrationKey(request.getNamespace(), request.getService(), request.getInstanceId());
+        return new RegistrationKey(
+                request.getNamespace(), request.getService(), request.getInstanceId());
     }
 
     @Override

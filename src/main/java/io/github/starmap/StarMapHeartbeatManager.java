@@ -5,9 +5,6 @@ import io.github.starmap.model.DeregisterRequest;
 import io.github.starmap.model.HeartbeatRequest;
 import io.github.starmap.model.RegisterRequest;
 import io.github.starmap.model.StarMapResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -19,15 +16,17 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/**
- * 注册跟踪与定时心跳管理器。
- */
+/** 注册跟踪与定时心跳管理器。 */
 final class StarMapHeartbeatManager {
 
     private static final Logger log = LoggerFactory.getLogger(StarMapHeartbeatManager.class);
-    private static final JavaType VOID_RESPONSE_TYPE = StarMapClient.OBJECT_MAPPER.getTypeFactory()
-            .constructParametricType(StarMapResponse.class, Void.class);
+    private static final JavaType VOID_RESPONSE_TYPE =
+            StarMapClient.OBJECT_MAPPER
+                    .getTypeFactory()
+                    .constructParametricType(StarMapResponse.class, Void.class);
 
     private final URI baseUri;
     private final NettyHttpTransport transport;
@@ -35,8 +34,10 @@ final class StarMapHeartbeatManager {
     private final boolean ownsHeartbeatExecutor;
     private final StarMapClientMetrics metrics;
     private final int maxLeaderRedirects;
-    private final ConcurrentMap<RegistrationKey, DeregisterRequest> registeredInstances = new ConcurrentHashMap<>();
-    private final ConcurrentMap<RegistrationKey, ScheduledHeartbeatSubscription> heartbeatSubscriptions = new ConcurrentHashMap<>();
+    private final ConcurrentMap<RegistrationKey, DeregisterRequest> registeredInstances =
+            new ConcurrentHashMap<>();
+    private final ConcurrentMap<RegistrationKey, ScheduledHeartbeatSubscription>
+            heartbeatSubscriptions = new ConcurrentHashMap<>();
 
     StarMapHeartbeatManager(
             URI baseUri,
@@ -44,8 +45,7 @@ final class StarMapHeartbeatManager {
             ScheduledExecutorService heartbeatExecutor,
             boolean ownsHeartbeatExecutor,
             StarMapClientMetrics metrics,
-            int maxLeaderRedirects
-    ) {
+            int maxLeaderRedirects) {
         this.baseUri = baseUri;
         this.transport = transport;
         this.heartbeatExecutor = heartbeatExecutor;
@@ -60,16 +60,18 @@ final class StarMapHeartbeatManager {
      * @param request 已归一化的注册请求
      */
     void trackRegistration(RegisterRequest request) {
-        registeredInstances.put(RegistrationKey.from(request), DeregisterRequest.builder()
-                .namespace(request.getNamespace())
-                .service(request.getService())
-                .organization(request.getOrganization())
-                .businessDomain(request.getBusinessDomain())
-                .capabilityDomain(request.getCapabilityDomain())
-                .application(request.getApplication())
-                .role(request.getRole())
-                .instanceId(request.getInstanceId())
-                .build());
+        registeredInstances.put(
+                RegistrationKey.from(request),
+                DeregisterRequest.builder()
+                        .namespace(request.getNamespace())
+                        .service(request.getService())
+                        .organization(request.getOrganization())
+                        .businessDomain(request.getBusinessDomain())
+                        .capabilityDomain(request.getCapabilityDomain())
+                        .application(request.getApplication())
+                        .role(request.getRole())
+                        .instanceId(request.getInstanceId())
+                        .build());
         metrics.recordRegistration(true, true);
     }
 
@@ -80,7 +82,8 @@ final class StarMapHeartbeatManager {
      */
     void handleDeregistered(DeregisterRequest request) {
         registeredInstances.remove(RegistrationKey.from(request));
-        ScheduledHeartbeatSubscription heartbeatSubscription = heartbeatSubscriptions.remove(RegistrationKey.from(request));
+        ScheduledHeartbeatSubscription heartbeatSubscription =
+                heartbeatSubscriptions.remove(RegistrationKey.from(request));
         if (heartbeatSubscription != null) {
             heartbeatSubscription.close();
         }
@@ -106,22 +109,29 @@ final class StarMapHeartbeatManager {
      */
     HeartbeatSubscription scheduleHeartbeat(HeartbeatRequest request, Duration interval) {
         RegistrationKey key = RegistrationKey.from(request);
-        ScheduledHeartbeatSubscription subscription = new ScheduledHeartbeatSubscription(request, interval);
+        ScheduledHeartbeatSubscription subscription =
+                new ScheduledHeartbeatSubscription(request, interval);
         ScheduledHeartbeatSubscription previous = heartbeatSubscriptions.put(key, subscription);
         if (previous != null) {
-            log.info("Replacing scheduled heartbeat namespace={}, service={}, instanceId={}",
-                    request.getNamespace(), request.getService(), request.getInstanceId());
+            log.info(
+                    "Replacing scheduled heartbeat namespace={}, service={}, instanceId={}",
+                    request.getNamespace(),
+                    request.getService(),
+                    request.getInstanceId());
             previous.close();
         }
 
-        ScheduledFuture<?> future = heartbeatExecutor.scheduleWithFixedDelay(subscription::tick,
-                interval.toMillis(),
-                interval.toMillis(),
-                TimeUnit.MILLISECONDS);
+        ScheduledFuture<?> future =
+                heartbeatExecutor.scheduleWithFixedDelay(
+                        subscription::tick, interval.toMillis(), interval.toMillis(), TimeUnit.MILLISECONDS);
         subscription.bind(future);
         metrics.recordScheduledHeartbeatOpened();
-        log.info("Started scheduled heartbeat namespace={}, service={}, instanceId={}, intervalMs={}",
-                request.getNamespace(), request.getService(), request.getInstanceId(), interval.toMillis());
+        log.info(
+                "Started scheduled heartbeat namespace={}, service={}, instanceId={}, intervalMs={}",
+                request.getNamespace(),
+                request.getService(),
+                request.getInstanceId(),
+                interval.toMillis());
         return subscription;
     }
 
@@ -164,15 +174,15 @@ final class StarMapHeartbeatManager {
     private StarMapResponse<Void> executeHeartbeat(HeartbeatRequest request, boolean scheduled) {
         long startNanos = System.nanoTime();
         try {
-            StarMapResponse<Void> response = transport.executeJson(
-                    "POST",
-                    baseUri,
-                    "/api/v1/registry/heartbeat",
-                    request,
-                    VOID_RESPONSE_TYPE,
-                    true,
-                    maxLeaderRedirects
-            );
+            StarMapResponse<Void> response =
+                    transport.executeJson(
+                            "POST",
+                            baseUri,
+                            "/api/v1/registry/heartbeat",
+                            request,
+                            VOID_RESPONSE_TYPE,
+                            true,
+                            maxLeaderRedirects);
             metrics.recordHeartbeat(System.nanoTime() - startNanos, true, scheduled);
             return response;
         } catch (RuntimeException e) {
@@ -182,7 +192,8 @@ final class StarMapHeartbeatManager {
     }
 
     private void closeHeartbeatSubscriptions() {
-        List<ScheduledHeartbeatSubscription> subscriptions = new ArrayList<>(heartbeatSubscriptions.values());
+        List<ScheduledHeartbeatSubscription> subscriptions =
+                new ArrayList<>(heartbeatSubscriptions.values());
         if (!subscriptions.isEmpty()) {
             log.info("Closing scheduled heartbeats count={}", subscriptions.size());
         }
@@ -197,17 +208,31 @@ final class StarMapHeartbeatManager {
         int successCount = 0;
         for (DeregisterRequest request : pending) {
             try {
-                transport.executeJson("POST", baseUri, "/api/v1/registry/deregister", request, VOID_RESPONSE_TYPE, true, maxLeaderRedirects);
+                transport.executeJson(
+                        "POST",
+                        baseUri,
+                        "/api/v1/registry/deregister",
+                        request,
+                        VOID_RESPONSE_TYPE,
+                        true,
+                        maxLeaderRedirects);
                 registeredInstances.remove(RegistrationKey.from(request));
                 metrics.recordAutoDeregister(true);
                 metrics.recordRegistration(false, true);
                 successCount++;
-                log.info("Auto deregistered instance namespace={}, service={}, instanceId={}",
-                        request.getNamespace(), request.getService(), request.getInstanceId());
+                log.info(
+                        "Auto deregistered instance namespace={}, service={}, instanceId={}",
+                        request.getNamespace(),
+                        request.getService(),
+                        request.getInstanceId());
             } catch (RuntimeException e) {
                 metrics.recordAutoDeregister(false);
-                log.warn("Failed to auto deregister instance namespace={}, service={}, instanceId={}",
-                        request.getNamespace(), request.getService(), request.getInstanceId(), e);
+                log.warn(
+                        "Failed to auto deregister instance namespace={}, service={}, instanceId={}",
+                        request.getNamespace(),
+                        request.getService(),
+                        request.getInstanceId(),
+                        e);
                 if (failure == null) {
                     failure = e;
                 } else {
@@ -215,8 +240,11 @@ final class StarMapHeartbeatManager {
                 }
             }
         }
-        log.info("Finished auto deregister on close total={}, success={}, failed={}",
-                pending.size(), successCount, pending.size() - successCount);
+        log.info(
+                "Finished auto deregister on close total={}, success={}, failed={}",
+                pending.size(),
+                successCount,
+                pending.size() - successCount);
         return failure;
     }
 
@@ -265,8 +293,12 @@ final class StarMapHeartbeatManager {
                 future.cancel(false);
             }
             metrics.recordScheduledHeartbeatClosed();
-            log.info("Stopped scheduled heartbeat namespace={}, service={}, instanceId={}, intervalMs={}",
-                    request.getNamespace(), request.getService(), request.getInstanceId(), interval.toMillis());
+            log.info(
+                    "Stopped scheduled heartbeat namespace={}, service={}, instanceId={}, intervalMs={}",
+                    request.getNamespace(),
+                    request.getService(),
+                    request.getInstanceId(),
+                    interval.toMillis());
         }
 
         private void bind(ScheduledFuture<?> future) {
@@ -279,16 +311,28 @@ final class StarMapHeartbeatManager {
             }
             try {
                 executeHeartbeat(request, true);
-                log.debug("Scheduled heartbeat succeeded namespace={}, service={}, instanceId={}",
-                        request.getNamespace(), request.getService(), request.getInstanceId());
+                log.debug(
+                        "Scheduled heartbeat succeeded namespace={}, service={}, instanceId={}",
+                        request.getNamespace(),
+                        request.getService(),
+                        request.getInstanceId());
             } catch (RuntimeException e) {
                 if (closed.get() && isInterruptedFailure(e)) {
-                    log.debug("Scheduled heartbeat interrupted during shutdown namespace={}, service={}, instanceId={}",
-                            request.getNamespace(), request.getService(), request.getInstanceId(), e);
+                    log.debug(
+                            "Scheduled heartbeat interrupted during shutdown namespace={}, service={},"
+                                    + " instanceId={}",
+                            request.getNamespace(),
+                            request.getService(),
+                            request.getInstanceId(),
+                            e);
                     return;
                 }
-                log.warn("Scheduled heartbeat failed namespace={}, service={}, instanceId={}",
-                        request.getNamespace(), request.getService(), request.getInstanceId(), e);
+                log.warn(
+                        "Scheduled heartbeat failed namespace={}, service={}, instanceId={}",
+                        request.getNamespace(),
+                        request.getService(),
+                        request.getInstanceId(),
+                        e);
             }
         }
     }

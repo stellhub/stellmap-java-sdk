@@ -11,14 +11,11 @@ import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-/**
- * 负责解析 watch SSE 响应流。
- */
+/** 负责解析 watch SSE 响应流。 */
 final class WatchResponseHandler extends SimpleChannelInboundHandler<HttpObject> {
 
     private final StarMapClient owner;
@@ -34,7 +31,11 @@ final class WatchResponseHandler extends SimpleChannelInboundHandler<HttpObject>
     private int statusCode;
     private Throwable terminalFailure;
 
-    WatchResponseHandler(StarMapClient owner, ManagedDirectoryWatchSubscription subscription, HttpRequest request, boolean reconnectAttempt) {
+    WatchResponseHandler(
+            StarMapClient owner,
+            ManagedDirectoryWatchSubscription subscription,
+            HttpRequest request,
+            boolean reconnectAttempt) {
         this.owner = owner;
         this.subscription = subscription;
         this.request = request;
@@ -43,12 +44,18 @@ final class WatchResponseHandler extends SimpleChannelInboundHandler<HttpObject>
 
     @Override
     public void channelActive(ChannelHandlerContext context) {
-        context.writeAndFlush(request).addListener(future -> {
-            if (!future.isSuccess()) {
-                subscription.handleConnectAttemptFailed(reconnectAttempt, new StarMapTransportException("Failed to send StarMap watch request", future.cause()));
-                context.close();
-            }
-        });
+        context
+                .writeAndFlush(request)
+                .addListener(
+                        future -> {
+                            if (!future.isSuccess()) {
+                                subscription.handleConnectAttemptFailed(
+                                        reconnectAttempt,
+                                        new StarMapTransportException(
+                                                "Failed to send StarMap watch request", future.cause()));
+                                context.close();
+                            }
+                        });
     }
 
     @Override
@@ -65,7 +72,10 @@ final class WatchResponseHandler extends SimpleChannelInboundHandler<HttpObject>
             if (!streamOpened) {
                 errorBuffer.write(ByteBufUtil.getBytes(content.content()));
                 if (content instanceof LastHttpContent) {
-                    terminalFailure = owner.transportInternal().buildServerException(statusCode, errorBuffer.toString(StandardCharsets.UTF_8));
+                    terminalFailure =
+                            owner
+                                    .transportInternal()
+                                    .buildServerException(statusCode, errorBuffer.toString(StandardCharsets.UTF_8));
                     context.close();
                 }
                 return;
@@ -82,7 +92,8 @@ final class WatchResponseHandler extends SimpleChannelInboundHandler<HttpObject>
 
     @Override
     public void channelInactive(ChannelHandlerContext context) {
-        subscription.handleStreamClosed(context.channel(), reconnectAttempt, streamOpened, terminalFailure);
+        subscription.handleStreamClosed(
+                context.channel(), reconnectAttempt, streamOpened, terminalFailure);
     }
 
     @Override
@@ -109,18 +120,14 @@ final class WatchResponseHandler extends SimpleChannelInboundHandler<HttpObject>
         }
     }
 
-    /**
-     * Flushes the last SSE line when the channel closes without trailing LF.
-     */
+    /** Flushes the last SSE line when the channel closes without trailing LF. */
     private void finalizePendingLine() {
         if (lineBuffer.size() > 0) {
             processLineBytes();
         }
     }
 
-    /**
-     * Decodes one complete SSE line and folds it into the current event frame.
-     */
+    /** Decodes one complete SSE line and folds it into the current event frame. */
     private void processLineBytes() {
         String line = lineBuffer.toString(StandardCharsets.UTF_8);
         lineBuffer.reset();
@@ -147,9 +154,7 @@ final class WatchResponseHandler extends SimpleChannelInboundHandler<HttpObject>
         }
     }
 
-    /**
-     * Publishes one completed watch event to the managed subscription.
-     */
+    /** Publishes one completed watch event to the managed subscription. */
     private void publishPendingEvent() {
         if (data.isEmpty()) {
             eventName = null;
@@ -157,7 +162,8 @@ final class WatchResponseHandler extends SimpleChannelInboundHandler<HttpObject>
             return;
         }
         try {
-            RegistryWatchEvent event = StarMapClient.OBJECT_MAPPER.readValue(data.toString(), RegistryWatchEvent.class);
+            RegistryWatchEvent event =
+                    StarMapClient.OBJECT_MAPPER.readValue(data.toString(), RegistryWatchEvent.class);
             if (!owner.hasText(event.getType()) && owner.hasText(eventName)) {
                 event.setType(eventName);
             }
@@ -166,7 +172,8 @@ final class WatchResponseHandler extends SimpleChannelInboundHandler<HttpObject>
             }
             subscription.handleEvent(event);
         } catch (Exception e) {
-            subscription.handleNonTerminalError(new StarMapTransportException("Failed to decode StarMap watch event", e));
+            subscription.handleNonTerminalError(
+                    new StarMapTransportException("Failed to decode StarMap watch event", e));
         } finally {
             data.setLength(0);
             eventName = null;

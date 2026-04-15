@@ -1,8 +1,6 @@
 package io.github.starmap.exception;
 
-/**
- * StarMap 传输层异常。
- */
+/** StarMap 传输层异常。 */
 public class StarMapTransportException extends StarMapException {
 
     public StarMapTransportException(String message, Throwable cause) {

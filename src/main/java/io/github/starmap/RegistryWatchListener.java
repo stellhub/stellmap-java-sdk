@@ -2,16 +2,11 @@ package io.github.starmap;
 
 import io.github.starmap.model.RegistryWatchEvent;
 
-/**
- * StarMap watch 监听器。
- */
+/** StarMap watch 监听器。 */
 public interface RegistryWatchListener {
 
-    /**
-     * 在 watch 连接建立后触发。
-     */
-    default void onOpen() {
-    }
+    /** 在 watch 连接建立后触发。 */
+    default void onOpen() {}
 
     /**
      * 在收到 watch 事件后触发。
@@ -25,12 +20,8 @@ public interface RegistryWatchListener {
      *
      * @param throwable watch 处理异常
      */
-    default void onError(Throwable throwable) {
-    }
+    default void onError(Throwable throwable) {}
 
-    /**
-     * 在 watch 连接关闭后触发。
-     */
-    default void onClosed() {
-    }
+    /** 在 watch 连接关闭后触发。 */
+    default void onClosed() {}
 }

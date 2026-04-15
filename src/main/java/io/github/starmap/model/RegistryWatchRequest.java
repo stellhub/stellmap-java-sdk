@@ -1,17 +1,14 @@
 package io.github.starmap.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import java.util.List;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-import java.util.Map;
-
-/**
- * StarMap 目录 watch 请求。
- */
+/** StarMap 目录 watch 请求。 */
 @Data
 @Builder(toBuilder = true)
 @NoArgsConstructor
@@ -45,9 +42,7 @@ public class RegistryWatchRequest {
 
     private Map<String, String> labels;
 
-    @Builder.Default
-    private long sinceRevision = 0L;
+    @Builder.Default private long sinceRevision = 0L;
 
-    @Builder.Default
-    private boolean includeSnapshot = true;
+    @Builder.Default private boolean includeSnapshot = true;
 }

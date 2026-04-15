@@ -6,9 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * StarMap 心跳续约请求。
- */
+/** StarMap 心跳续约请求。 */
 @Data
 @Builder(toBuilder = true)
 @NoArgsConstructor

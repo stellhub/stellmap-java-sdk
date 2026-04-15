@@ -6,9 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * StarMap 注销请求。
- */
+/** StarMap 注销请求。 */
 @Data
 @Builder(toBuilder = true)
 @NoArgsConstructor

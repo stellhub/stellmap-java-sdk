@@ -15,18 +15,15 @@ import io.github.starmap.model.StarMapResponse;
 import io.netty.channel.EventLoopGroup;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/**
- * StarMap Java SDK 主客户端。
- */
+/** StarMap Java SDK 主客户端。 */
 public class StarMapClient implements AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(StarMapClient.class);
@@ -37,10 +34,12 @@ public class StarMapClient implements AutoCloseable {
     private static final String INSTRUMENTATION_NAME = "io.github.starmap";
     private static final String INSTRUMENTATION_VERSION = "0.0.1";
     private static final NettyClientFactory NETTY_CLIENT_FACTORY = new NettyClientFactory();
-    private static final StarMapClientSettingsNormalizer SETTINGS_NORMALIZER = new StarMapClientSettingsNormalizer();
-    static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
-            .registerModule(new JavaTimeModule())
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    private static final StarMapClientSettingsNormalizer SETTINGS_NORMALIZER =
+            new StarMapClientSettingsNormalizer();
+    static final ObjectMapper OBJECT_MAPPER =
+            new ObjectMapper()
+                    .registerModule(new JavaTimeModule())
+                    .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     private static final StarMapRequestNormalizer REQUEST_NORMALIZER = new StarMapRequestNormalizer();
 
     private final URI baseUri;
@@ -55,11 +54,11 @@ public class StarMapClient implements AutoCloseable {
     private final NettyHttpTransport httpTransport;
     private final StarMapHeartbeatManager heartbeatManager;
     private final StarMapClientLifecycleManager lifecycleManager;
-    private static final RegistryWatchListener NOOP_WATCH_LISTENER = new RegistryWatchListener() {
-        @Override
-        public void onEvent(RegistryWatchEvent event) {
-        }
-    };
+    private static final RegistryWatchListener NOOP_WATCH_LISTENER =
+            new RegistryWatchListener() {
+                @Override
+                public void onEvent(RegistryWatchEvent event) {}
+            };
 
     public StarMapClient(StarMapClientOptions options) {
         this(options, null, null);
@@ -86,36 +85,45 @@ public class StarMapClient implements AutoCloseable {
      * @param eventLoopGroup 可选外部 EventLoopGroup
      * @param openTelemetry 可选 OpenTelemetry
      */
-    public StarMapClient(StarMapClientOptions options, EventLoopGroup eventLoopGroup, OpenTelemetry openTelemetry) {
-        StarMapClientSettingsNormalizer.NormalizedClientSettings normalizedSettings = SETTINGS_NORMALIZER.normalize(options);
+    public StarMapClient(
+            StarMapClientOptions options, EventLoopGroup eventLoopGroup, OpenTelemetry openTelemetry) {
+        StarMapClientSettingsNormalizer.NormalizedClientSettings normalizedSettings =
+                SETTINGS_NORMALIZER.normalize(options);
         this.baseUri = normalizedSettings.baseUri();
         this.maxLeaderRedirects = normalizedSettings.maxLeaderRedirects();
         this.watchAutoReconnect = normalizedSettings.watchAutoReconnect();
         this.watchReconnectInitialDelay = normalizedSettings.watchReconnectInitialDelay();
         this.watchReconnectMaxDelay = normalizedSettings.watchReconnectMaxDelay();
         this.watchReconnectMaxAttempts = normalizedSettings.watchReconnectMaxAttempts();
-        OpenTelemetry effectiveOpenTelemetry = openTelemetry != null ? openTelemetry : GlobalOpenTelemetry.get();
-        this.metrics = new StarMapClientMetrics(effectiveOpenTelemetry, INSTRUMENTATION_NAME, INSTRUMENTATION_VERSION);
-        NettyClientFactory.ClientResources clientResources = NETTY_CLIENT_FACTORY.createResources(new NettyClientFactory.ClientSettings(
-                this.baseUri,
-                normalizedSettings.requestTimeout(),
-                normalizedSettings.followLeaderRedirect(),
-                this.maxLeaderRedirects,
-                normalizedSettings.autoDeregisterOnClose(),
-                normalizedSettings.defaultHeaders(),
-                eventLoopGroup,
-                options.getWatchCallbackExecutor(),
-                options.getHeartbeatExecutor(),
-                options.getNettyEventLoopOptions(),
-                this.metrics
-        ));
+        OpenTelemetry effectiveOpenTelemetry =
+                openTelemetry != null ? openTelemetry : GlobalOpenTelemetry.get();
+        this.metrics =
+                new StarMapClientMetrics(
+                        effectiveOpenTelemetry, INSTRUMENTATION_NAME, INSTRUMENTATION_VERSION);
+        NettyClientFactory.ClientResources clientResources =
+                NETTY_CLIENT_FACTORY.createResources(
+                        new NettyClientFactory.ClientSettings(
+                                this.baseUri,
+                                normalizedSettings.requestTimeout(),
+                                normalizedSettings.followLeaderRedirect(),
+                                this.maxLeaderRedirects,
+                                normalizedSettings.autoDeregisterOnClose(),
+                                normalizedSettings.defaultHeaders(),
+                                eventLoopGroup,
+                                options.getWatchCallbackExecutor(),
+                                options.getHeartbeatExecutor(),
+                                options.getNettyEventLoopOptions(),
+                                this.metrics));
         this.eventLoopGroup = clientResources.eventLoopGroup();
         this.watchCallbackExecutor = clientResources.watchCallbackExecutor();
         this.httpTransport = clientResources.httpTransport();
         this.heartbeatManager = clientResources.heartbeatManager();
         this.lifecycleManager = clientResources.lifecycleManager();
-        log.debug("Initialized StarMapClient baseUrl={}, autoDeregisterOnClose={}, watchAutoReconnect={}",
-                this.baseUri, normalizedSettings.autoDeregisterOnClose(), this.watchAutoReconnect);
+        log.debug(
+                "Initialized StarMapClient baseUrl={}, autoDeregisterOnClose={}, watchAutoReconnect={}",
+                this.baseUri,
+                normalizedSettings.autoDeregisterOnClose(),
+                this.watchAutoReconnect);
     }
 
     /**
@@ -125,12 +133,18 @@ public class StarMapClient implements AutoCloseable {
      * @return StarMap 成功响应
      */
     public StarMapResponse<Void> register(RegisterRequest request) {
-        JavaType responseType = OBJECT_MAPPER.getTypeFactory().constructParametricType(StarMapResponse.class, Void.class);
+        JavaType responseType =
+                OBJECT_MAPPER.getTypeFactory().constructParametricType(StarMapResponse.class, Void.class);
         RegisterRequest normalized = REQUEST_NORMALIZER.normalizeRegisterRequest(request);
-        StarMapResponse<Void> response = httpTransport.executeJson("POST", baseUri, REGISTER_PATH, normalized, responseType, true, maxLeaderRedirects);
+        StarMapResponse<Void> response =
+                httpTransport.executeJson(
+                        "POST", baseUri, REGISTER_PATH, normalized, responseType, true, maxLeaderRedirects);
         heartbeatManager.trackRegistration(normalized);
-        log.info("Registered instance namespace={}, service={}, instanceId={}",
-                normalized.getNamespace(), normalized.getService(), normalized.getInstanceId());
+        log.info(
+                "Registered instance namespace={}, service={}, instanceId={}",
+                normalized.getNamespace(),
+                normalized.getService(),
+                normalized.getInstanceId());
         return response;
     }
 
@@ -143,7 +157,8 @@ public class StarMapClient implements AutoCloseable {
     public HeartbeatSubscription registerAndScheduleHeartbeat(RegisterRequest request) {
         RegisterRequest normalized = REQUEST_NORMALIZER.normalizeRegisterRequest(request);
         register(normalized);
-        return scheduleHeartbeat(toHeartbeatRequest(normalized), resolveHeartbeatInterval(normalized.getLeaseTtlSeconds()));
+        return scheduleHeartbeat(
+                toHeartbeatRequest(normalized), resolveHeartbeatInterval(normalized.getLeaseTtlSeconds()));
     }
 
     /**
@@ -153,7 +168,8 @@ public class StarMapClient implements AutoCloseable {
      * @param interval 心跳间隔
      * @return 定时心跳句柄
      */
-    public HeartbeatSubscription registerAndScheduleHeartbeat(RegisterRequest request, Duration interval) {
+    public HeartbeatSubscription registerAndScheduleHeartbeat(
+            RegisterRequest request, Duration interval) {
         RegisterRequest normalized = REQUEST_NORMALIZER.normalizeRegisterRequest(request);
         register(normalized);
         return scheduleHeartbeat(toHeartbeatRequest(normalized), interval);
@@ -166,12 +182,18 @@ public class StarMapClient implements AutoCloseable {
      * @return StarMap 成功响应
      */
     public StarMapResponse<Void> deregister(DeregisterRequest request) {
-        JavaType responseType = OBJECT_MAPPER.getTypeFactory().constructParametricType(StarMapResponse.class, Void.class);
+        JavaType responseType =
+                OBJECT_MAPPER.getTypeFactory().constructParametricType(StarMapResponse.class, Void.class);
         DeregisterRequest normalized = REQUEST_NORMALIZER.normalizeDeregisterRequest(request);
-        StarMapResponse<Void> response = httpTransport.executeJson("POST", baseUri, DEREGISTER_PATH, normalized, responseType, true, maxLeaderRedirects);
+        StarMapResponse<Void> response =
+                httpTransport.executeJson(
+                        "POST", baseUri, DEREGISTER_PATH, normalized, responseType, true, maxLeaderRedirects);
         heartbeatManager.handleDeregistered(normalized);
-        log.info("Deregistered instance namespace={}, service={}, instanceId={}",
-                normalized.getNamespace(), normalized.getService(), normalized.getInstanceId());
+        log.info(
+                "Deregistered instance namespace={}, service={}, instanceId={}",
+                normalized.getNamespace(),
+                normalized.getService(),
+                normalized.getInstanceId());
         return response;
     }
 
@@ -184,8 +206,11 @@ public class StarMapClient implements AutoCloseable {
     public StarMapResponse<Void> heartbeat(HeartbeatRequest request) {
         HeartbeatRequest normalized = REQUEST_NORMALIZER.normalizeHeartbeatRequest(request);
         StarMapResponse<Void> response = heartbeatManager.heartbeat(normalized);
-        log.debug("Heartbeat succeeded namespace={}, service={}, instanceId={}",
-                normalized.getNamespace(), normalized.getService(), normalized.getInstanceId());
+        log.debug(
+                "Heartbeat succeeded namespace={}, service={}, instanceId={}",
+                normalized.getNamespace(),
+                normalized.getService(),
+                normalized.getInstanceId());
         return response;
     }
 
@@ -196,8 +221,10 @@ public class StarMapClient implements AutoCloseable {
      * @return 定时心跳句柄
      */
     public HeartbeatSubscription scheduleHeartbeat(HeartbeatRequest request) {
-        HeartbeatRequest normalized = REQUEST_NORMALIZER.normalizeHeartbeatRequestForScheduling(request);
-        return heartbeatManager.scheduleHeartbeat(normalized, resolveHeartbeatInterval(normalized.getLeaseTtlSeconds()));
+        HeartbeatRequest normalized =
+                REQUEST_NORMALIZER.normalizeHeartbeatRequestForScheduling(request);
+        return heartbeatManager.scheduleHeartbeat(
+                normalized, resolveHeartbeatInterval(normalized.getLeaseTtlSeconds()));
     }
 
     /**
@@ -208,8 +235,10 @@ public class StarMapClient implements AutoCloseable {
      * @return 定时心跳句柄
      */
     public HeartbeatSubscription scheduleHeartbeat(HeartbeatRequest request, Duration interval) {
-        HeartbeatRequest normalized = REQUEST_NORMALIZER.normalizeHeartbeatRequestForScheduling(request);
-        return heartbeatManager.scheduleHeartbeat(normalized, SETTINGS_NORMALIZER.normalizeTimeout(interval, "interval"));
+        HeartbeatRequest normalized =
+                REQUEST_NORMALIZER.normalizeHeartbeatRequestForScheduling(request);
+        return heartbeatManager.scheduleHeartbeat(
+                normalized, SETTINGS_NORMALIZER.normalizeTimeout(interval, "interval"));
     }
 
     /**
@@ -263,9 +292,18 @@ public class StarMapClient implements AutoCloseable {
      */
     public StarMapResponse<List<RegistryInstance>> queryInstances(RegistryQueryRequest request) {
         RegistryQueryRequest normalized = REQUEST_NORMALIZER.normalizeRegistryQueryRequest(request);
-        JavaType listType = OBJECT_MAPPER.getTypeFactory().constructCollectionType(List.class, RegistryInstance.class);
-        JavaType responseType = OBJECT_MAPPER.getTypeFactory().constructParametricType(StarMapResponse.class, listType);
-        return httpTransport.executeJson("GET", baseUri, INSTANCES_PATH + REQUEST_NORMALIZER.buildRegistryQuery(normalized), null, responseType, false, 0);
+        JavaType listType =
+                OBJECT_MAPPER.getTypeFactory().constructCollectionType(List.class, RegistryInstance.class);
+        JavaType responseType =
+                OBJECT_MAPPER.getTypeFactory().constructParametricType(StarMapResponse.class, listType);
+        return httpTransport.executeJson(
+                "GET",
+                baseUri,
+                INSTANCES_PATH + REQUEST_NORMALIZER.buildRegistryQuery(normalized),
+                null,
+                responseType,
+                false,
+                0);
     }
 
     /**
@@ -275,7 +313,8 @@ public class StarMapClient implements AutoCloseable {
      * @param listener watch 监听器
      * @return watch 订阅句柄
      */
-    public RegistryWatchSubscription watchInstances(RegistryQueryRequest request, RegistryWatchListener listener) {
+    public RegistryWatchSubscription watchInstances(
+            RegistryQueryRequest request, RegistryWatchListener listener) {
         RegistryQueryRequest normalized = REQUEST_NORMALIZER.normalizeRegistryQueryRequest(request);
         return watchDirectory(REQUEST_NORMALIZER.toWatchRequest(normalized), listener);
     }
@@ -297,10 +336,12 @@ public class StarMapClient implements AutoCloseable {
      * @param listener 事件监听器
      * @return 目录订阅句柄
      */
-    public ServiceDirectorySubscription watchDirectory(RegistryWatchRequest request, RegistryWatchListener listener) {
+    public ServiceDirectorySubscription watchDirectory(
+            RegistryWatchRequest request, RegistryWatchListener listener) {
         Objects.requireNonNull(listener, "listener must not be null");
         RegistryWatchRequest normalized = REQUEST_NORMALIZER.normalizeWatchRequest(request);
-        ManagedDirectoryWatchSubscription subscription = new ManagedDirectoryWatchSubscription(this, normalized, listener);
+        ManagedDirectoryWatchSubscription subscription =
+                new ManagedDirectoryWatchSubscription(this, normalized, listener);
         subscription.openInitial();
         return subscription;
     }
@@ -359,5 +400,4 @@ public class StarMapClient implements AutoCloseable {
         long intervalSeconds = Math.max(1L, ttl / 3L);
         return Duration.ofSeconds(intervalSeconds);
     }
-
 }

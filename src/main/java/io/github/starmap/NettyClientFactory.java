@@ -14,8 +14,6 @@ import io.netty.util.concurrent.EventExecutorChooserFactory;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
 import io.netty.util.internal.PlatformDependent;
-
-import javax.net.ssl.SSLException;
 import java.net.URI;
 import java.nio.channels.spi.SelectorProvider;
 import java.time.Duration;
@@ -24,10 +22,9 @@ import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import javax.net.ssl.SSLException;
 
-/**
- * Netty 客户端底层资源工厂。
- */
+/** Netty 客户端底层资源工厂。 */
 final class NettyClientFactory {
 
     /**
@@ -39,54 +36,62 @@ final class NettyClientFactory {
     ClientResources createResources(ClientSettings settings) {
         Objects.requireNonNull(settings, "settings must not be null");
 
-        EventLoopGroup eventLoopGroup = settings.eventLoopGroupOverride() != null
-                ? settings.eventLoopGroupOverride()
-                : createEventLoopGroup(settings.nettyEventLoopOptions());
+        EventLoopGroup eventLoopGroup =
+                settings.eventLoopGroupOverride() != null
+                        ? settings.eventLoopGroupOverride()
+                        : createEventLoopGroup(settings.nettyEventLoopOptions());
         boolean ownsEventLoopGroup = settings.eventLoopGroupOverride() == null;
 
-        Bootstrap bootstrapTemplate = new Bootstrap()
-                .group(eventLoopGroup)
-                .channel(NioSocketChannel.class)
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeoutMillis(settings.requestTimeout()));
+        Bootstrap bootstrapTemplate =
+                new Bootstrap()
+                        .group(eventLoopGroup)
+                        .channel(NioSocketChannel.class)
+                        .option(
+                                ChannelOption.CONNECT_TIMEOUT_MILLIS,
+                                connectTimeoutMillis(settings.requestTimeout()));
 
-        ExecutorService watchCallbackExecutor = settings.watchCallbackExecutor() != null
-                ? settings.watchCallbackExecutor()
-                : Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("starmap-watch-callback-", 0).factory());
+        ExecutorService watchCallbackExecutor =
+                settings.watchCallbackExecutor() != null
+                        ? settings.watchCallbackExecutor()
+                        : Executors.newThreadPerTaskExecutor(
+                                Thread.ofVirtual().name("starmap-watch-callback-", 0).factory());
         boolean ownsWatchCallbackExecutor = settings.watchCallbackExecutor() == null;
 
-        ScheduledExecutorService heartbeatExecutor = settings.heartbeatExecutor() != null
-                ? settings.heartbeatExecutor()
-                : Executors.newSingleThreadScheduledExecutor(Thread.ofVirtual().name("starmap-heartbeat-", 0).factory());
+        ScheduledExecutorService heartbeatExecutor =
+                settings.heartbeatExecutor() != null
+                        ? settings.heartbeatExecutor()
+                        : Executors.newSingleThreadScheduledExecutor(
+                                Thread.ofVirtual().name("starmap-heartbeat-", 0).factory());
         boolean ownsHeartbeatExecutor = settings.heartbeatExecutor() == null;
 
         SslContext sslContext = buildSslContext();
-        NettyHttpTransport httpTransport = new NettyHttpTransport(
-                StarMapClient.OBJECT_MAPPER,
-                eventLoopGroup,
-                bootstrapTemplate,
-                settings.requestTimeout(),
-                settings.defaultHeaders(),
-                sslContext,
-                settings.metrics(),
-                settings.followLeaderRedirect()
-        );
-        StarMapHeartbeatManager heartbeatManager = new StarMapHeartbeatManager(
-                settings.baseUri(),
-                httpTransport,
-                heartbeatExecutor,
-                ownsHeartbeatExecutor,
-                settings.metrics(),
-                settings.maxLeaderRedirects()
-        );
-        StarMapClientLifecycleManager lifecycleManager = new StarMapClientLifecycleManager(
-                settings.baseUri(),
-                settings.autoDeregisterOnClose(),
-                heartbeatManager,
-                watchCallbackExecutor,
-                ownsWatchCallbackExecutor,
-                eventLoopGroup,
-                ownsEventLoopGroup
-        );
+        NettyHttpTransport httpTransport =
+                new NettyHttpTransport(
+                        StarMapClient.OBJECT_MAPPER,
+                        eventLoopGroup,
+                        bootstrapTemplate,
+                        settings.requestTimeout(),
+                        settings.defaultHeaders(),
+                        sslContext,
+                        settings.metrics(),
+                        settings.followLeaderRedirect());
+        StarMapHeartbeatManager heartbeatManager =
+                new StarMapHeartbeatManager(
+                        settings.baseUri(),
+                        httpTransport,
+                        heartbeatExecutor,
+                        ownsHeartbeatExecutor,
+                        settings.metrics(),
+                        settings.maxLeaderRedirects());
+        StarMapClientLifecycleManager lifecycleManager =
+                new StarMapClientLifecycleManager(
+                        settings.baseUri(),
+                        settings.autoDeregisterOnClose(),
+                        heartbeatManager,
+                        watchCallbackExecutor,
+                        ownsWatchCallbackExecutor,
+                        eventLoopGroup,
+                        ownsEventLoopGroup);
 
         return new ClientResources(
                 eventLoopGroup,
@@ -97,8 +102,7 @@ final class NettyClientFactory {
                 sslContext,
                 httpTransport,
                 heartbeatManager,
-                lifecycleManager
-        );
+                lifecycleManager);
     }
 
     private EventLoopGroup createEventLoopGroup(NettyEventLoopOptions options) {
@@ -106,25 +110,32 @@ final class NettyClientFactory {
             return new NioEventLoopGroup();
         }
         int threads = Math.max(0, options.getThreads());
-        ExecutorService executor = options.getExecutor() instanceof ExecutorService executorService ? executorService : null;
-        EventExecutorChooserFactory chooserFactory = options.getChooserFactory() != null
-                ? options.getChooserFactory()
-                : DefaultEventExecutorChooserFactory.INSTANCE;
-        SelectorProvider selectorProvider = options.getSelectorProvider() != null
-                ? options.getSelectorProvider()
-                : SelectorProvider.provider();
-        io.netty.channel.SelectStrategyFactory selectStrategyFactory = options.getSelectStrategyFactory() != null
-                ? options.getSelectStrategyFactory()
-                : DefaultSelectStrategyFactory.INSTANCE;
-        RejectedExecutionHandler rejectedExecutionHandler = options.getRejectedExecutionHandler() != null
-                ? options.getRejectedExecutionHandler()
-                : RejectedExecutionHandlers.reject();
-        EventLoopTaskQueueFactory taskQueueFactory = options.getTaskQueueFactory() != null
-                ? options.getTaskQueueFactory()
-                : PlatformDependent::newMpscQueue;
-        EventLoopTaskQueueFactory tailTaskQueueFactory = options.getTailTaskQueueFactory() != null
-                ? options.getTailTaskQueueFactory()
-                : PlatformDependent::newMpscQueue;
+        ExecutorService executor =
+                options.getExecutor() instanceof ExecutorService executorService ? executorService : null;
+        EventExecutorChooserFactory chooserFactory =
+                options.getChooserFactory() != null
+                        ? options.getChooserFactory()
+                        : DefaultEventExecutorChooserFactory.INSTANCE;
+        SelectorProvider selectorProvider =
+                options.getSelectorProvider() != null
+                        ? options.getSelectorProvider()
+                        : SelectorProvider.provider();
+        io.netty.channel.SelectStrategyFactory selectStrategyFactory =
+                options.getSelectStrategyFactory() != null
+                        ? options.getSelectStrategyFactory()
+                        : DefaultSelectStrategyFactory.INSTANCE;
+        RejectedExecutionHandler rejectedExecutionHandler =
+                options.getRejectedExecutionHandler() != null
+                        ? options.getRejectedExecutionHandler()
+                        : RejectedExecutionHandlers.reject();
+        EventLoopTaskQueueFactory taskQueueFactory =
+                options.getTaskQueueFactory() != null
+                        ? options.getTaskQueueFactory()
+                        : PlatformDependent::newMpscQueue;
+        EventLoopTaskQueueFactory tailTaskQueueFactory =
+                options.getTailTaskQueueFactory() != null
+                        ? options.getTailTaskQueueFactory()
+                        : PlatformDependent::newMpscQueue;
 
         if (executor == null
                 && options.getChooserFactory() == null
@@ -143,8 +154,7 @@ final class NettyClientFactory {
                 selectStrategyFactory,
                 rejectedExecutionHandler,
                 taskQueueFactory,
-                tailTaskQueueFactory
-        );
+                tailTaskQueueFactory);
     }
 
     private int connectTimeoutMillis(Duration requestTimeout) {
@@ -160,9 +170,7 @@ final class NettyClientFactory {
         }
     }
 
-    /**
-     * 工厂输入配置。
-     */
+    /** 工厂输入配置。 */
     record ClientSettings(
             URI baseUri,
             Duration requestTimeout,
@@ -174,13 +182,9 @@ final class NettyClientFactory {
             ExecutorService watchCallbackExecutor,
             ScheduledExecutorService heartbeatExecutor,
             NettyEventLoopOptions nettyEventLoopOptions,
-            StarMapClientMetrics metrics
-    ) {
-    }
+            StarMapClientMetrics metrics) {}
 
-    /**
-     * 工厂输出资源。
-     */
+    /** 工厂输出资源。 */
     record ClientResources(
             EventLoopGroup eventLoopGroup,
             boolean ownsEventLoopGroup,
@@ -190,7 +194,5 @@ final class NettyClientFactory {
             SslContext sslContext,
             NettyHttpTransport httpTransport,
             StarMapHeartbeatManager heartbeatManager,
-            StarMapClientLifecycleManager lifecycleManager
-    ) {
-    }
+            StarMapClientLifecycleManager lifecycleManager) {}
 }

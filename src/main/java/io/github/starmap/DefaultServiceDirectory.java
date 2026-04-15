@@ -2,7 +2,6 @@ package io.github.starmap;
 
 import io.github.starmap.model.RegistryInstance;
 import io.github.starmap.model.RegistryWatchEvent;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -13,9 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-/**
- * 默认本地目录缓存实现。
- */
+/** 默认本地目录缓存实现。 */
 final class DefaultServiceDirectory implements ServiceDirectory {
 
     private static final String TYPE_SNAPSHOT = "SNAPSHOT";
@@ -47,9 +44,7 @@ final class DefaultServiceDirectory implements ServiceDirectory {
         }
     }
 
-    /**
-     * 清空目录缓存。
-     */
+    /** 清空目录缓存。 */
     void clear() {
         states.clear();
         directoryRevision.set(0L);
@@ -82,10 +77,8 @@ final class DefaultServiceDirectory implements ServiceDirectory {
 
     @Override
     public ServiceSnapshot getSnapshot(String namespace, String service) {
-        ServiceState state = states.get(ServiceKey.builder()
-                .namespace(namespace)
-                .service(service)
-                .build());
+        ServiceState state =
+                states.get(ServiceKey.builder().namespace(namespace).service(service).build());
         if (state == null) {
             return null;
         }
@@ -119,7 +112,8 @@ final class DefaultServiceDirectory implements ServiceDirectory {
         if (key == null) {
             return;
         }
-        List<RegistryInstance> instances = event.getInstance() == null ? List.of() : List.of(event.getInstance());
+        List<RegistryInstance> instances =
+                event.getInstance() == null ? List.of() : List.of(event.getInstance());
         replaceSnapshot(key, instances, event.getRevision());
     }
 
@@ -138,13 +132,21 @@ final class DefaultServiceDirectory implements ServiceDirectory {
     private void delete(RegistryWatchEvent event) {
         if (event.getInstances() != null && !event.getInstances().isEmpty()) {
             for (RegistryInstance instance : event.getInstances()) {
-                deleteInstance(instance.getNamespace(), instance.getService(), instance.getInstanceId(), event.getRevision());
+                deleteInstance(
+                        instance.getNamespace(),
+                        instance.getService(),
+                        instance.getInstanceId(),
+                        event.getRevision());
             }
             return;
         }
         RegistryInstance instance = event.getInstance();
         if (instance != null) {
-            deleteInstance(instance.getNamespace(), instance.getService(), instance.getInstanceId(), event.getRevision());
+            deleteInstance(
+                    instance.getNamespace(),
+                    instance.getService(),
+                    instance.getInstanceId(),
+                    event.getRevision());
             return;
         }
         ServiceKey key = resolveEventKey(event);
@@ -198,7 +200,8 @@ final class DefaultServiceDirectory implements ServiceDirectory {
         if (key == null || !hasText(instance.getInstanceId())) {
             return;
         }
-        states.computeIfAbsent(key, ignored -> new ServiceState())
+        states
+                .computeIfAbsent(key, ignored -> new ServiceState())
                 .upsert(instance.getInstanceId().trim(), instance, revision);
     }
 
@@ -206,10 +209,8 @@ final class DefaultServiceDirectory implements ServiceDirectory {
         if (!hasText(namespace) || !hasText(service) || !hasText(instanceId)) {
             return;
         }
-        ServiceKey key = ServiceKey.builder()
-                .namespace(namespace.trim())
-                .service(service.trim())
-                .build();
+        ServiceKey key =
+                ServiceKey.builder().namespace(namespace.trim()).service(service.trim()).build();
         ServiceState state = states.get(key);
         if (state == null) {
             return;
@@ -261,9 +262,7 @@ final class DefaultServiceDirectory implements ServiceDirectory {
         return value != null && !value.trim().isEmpty();
     }
 
-    /**
-     * Mutable internal state for one service.
-     */
+    /** Mutable internal state for one service. */
     private static final class ServiceState {
 
         private final ConcurrentMap<String, RegistryInstance> instancesById = new ConcurrentHashMap<>();
@@ -301,11 +300,10 @@ final class DefaultServiceDirectory implements ServiceDirectory {
 
         private ServiceSnapshot toSnapshot() {
             List<RegistryInstance> instances = new ArrayList<>(instancesById.values());
-            instances.sort(Comparator.comparing(RegistryInstance::getInstanceId, Comparator.nullsLast(String::compareTo)));
-            return ServiceSnapshot.builder()
-                    .revision(revision.get())
-                    .instances(instances)
-                    .build();
+            instances.sort(
+                    Comparator.comparing(
+                            RegistryInstance::getInstanceId, Comparator.nullsLast(String::compareTo)));
+            return ServiceSnapshot.builder().revision(revision.get()).instances(instances).build();
         }
 
         private void updateRevision(long newRevision) {
@@ -322,6 +320,5 @@ final class DefaultServiceDirectory implements ServiceDirectory {
      * @param serviceCount 当前服务数
      * @param instanceCount 当前实例总数
      */
-    record DirectoryStats(int serviceCount, int instanceCount) {
-    }
+    record DirectoryStats(int serviceCount, int instanceCount) {}
 }

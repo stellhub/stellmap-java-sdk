@@ -1,20 +1,13 @@
 package io.github.starmap;
 
-/**
- * StarMap SDK 默认值定义。
- */
+/** StarMap SDK 默认值定义。 */
 public final class StarMapDefaults {
 
-    /**
-     * StarMap 服务端默认租约 TTL。
-     */
+    /** StarMap 服务端默认租约 TTL。 */
     public static final long DEFAULT_LEASE_TTL_SECONDS = 30L;
 
-    /**
-     * StarMap 服务端默认端点权重。
-     */
+    /** StarMap 服务端默认端点权重。 */
     public static final int DEFAULT_ENDPOINT_WEIGHT = 100;
 
-    private StarMapDefaults() {
-    }
+    private StarMapDefaults() {}
 }

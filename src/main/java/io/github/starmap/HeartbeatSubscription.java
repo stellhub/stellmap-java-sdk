@@ -2,9 +2,7 @@ package io.github.starmap;
 
 import io.github.starmap.model.HeartbeatRequest;
 
-/**
- * StarMap 定时心跳句柄。
- */
+/** StarMap 定时心跳句柄。 */
 public interface HeartbeatSubscription extends AutoCloseable {
 
     /**
@@ -21,9 +19,7 @@ public interface HeartbeatSubscription extends AutoCloseable {
      */
     HeartbeatRequest getRequest();
 
-    /**
-     * 主动关闭定时心跳。
-     */
+    /** 主动关闭定时心跳。 */
     @Override
     void close();
 }

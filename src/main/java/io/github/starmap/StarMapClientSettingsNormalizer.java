@@ -6,9 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
-/**
- * 客户端基础配置归一化器。
- */
+/** 客户端基础配置归一化器。 */
 final class StarMapClientSettingsNormalizer {
 
     /**
@@ -21,10 +19,13 @@ final class StarMapClientSettingsNormalizer {
         Objects.requireNonNull(options, "options must not be null");
         URI baseUri = normalizeBaseUri(options.getBaseUrl());
         Duration requestTimeout = normalizeTimeout(options.getRequestTimeout(), "requestTimeout");
-        Duration watchReconnectInitialDelay = normalizeTimeout(options.getWatchReconnectInitialDelay(), "watchReconnectInitialDelay");
-        Duration watchReconnectMaxDelay = normalizeTimeout(options.getWatchReconnectMaxDelay(), "watchReconnectMaxDelay");
+        Duration watchReconnectInitialDelay =
+                normalizeTimeout(options.getWatchReconnectInitialDelay(), "watchReconnectInitialDelay");
+        Duration watchReconnectMaxDelay =
+                normalizeTimeout(options.getWatchReconnectMaxDelay(), "watchReconnectMaxDelay");
         if (watchReconnectMaxDelay.compareTo(watchReconnectInitialDelay) < 0) {
-            throw new IllegalArgumentException("watchReconnectMaxDelay must be greater than or equal to watchReconnectInitialDelay");
+            throw new IllegalArgumentException(
+                    "watchReconnectMaxDelay must be greater than or equal to watchReconnectInitialDelay");
         }
         return new NormalizedClientSettings(
                 baseUri,
@@ -36,8 +37,7 @@ final class StarMapClientSettingsNormalizer {
                 watchReconnectInitialDelay,
                 watchReconnectMaxDelay,
                 options.getWatchReconnectMaxAttempts(),
-                normalizeHeaders(options.getDefaultHeaders())
-        );
+                normalizeHeaders(options.getDefaultHeaders()));
     }
 
     /**
@@ -67,13 +67,14 @@ final class StarMapClientSettingsNormalizer {
             return Map.of();
         }
         Map<String, String> result = new LinkedHashMap<>();
-        headers.forEach((k, v) -> {
-            String normalizedKey = trimToNull(k);
-            String normalizedValue = trimToNull(v);
-            if (normalizedKey != null && normalizedValue != null) {
-                result.put(normalizedKey, normalizedValue);
-            }
-        });
+        headers.forEach(
+                (k, v) -> {
+                    String normalizedKey = trimToNull(k);
+                    String normalizedValue = trimToNull(v);
+                    if (normalizedKey != null && normalizedValue != null) {
+                        result.put(normalizedKey, normalizedValue);
+                    }
+                });
         return Map.copyOf(result);
     }
 
@@ -93,9 +94,7 @@ final class StarMapClientSettingsNormalizer {
         return normalized.isEmpty() ? null : normalized;
     }
 
-    /**
-     * 归一化后的客户端配置结果。
-     */
+    /** 归一化后的客户端配置结果。 */
     record NormalizedClientSettings(
             URI baseUri,
             Duration requestTimeout,
@@ -106,7 +105,5 @@ final class StarMapClientSettingsNormalizer {
             Duration watchReconnectInitialDelay,
             Duration watchReconnectMaxDelay,
             int watchReconnectMaxAttempts,
-            Map<String, String> defaultHeaders
-    ) {
-    }
+            Map<String, String> defaultHeaders) {}
 }

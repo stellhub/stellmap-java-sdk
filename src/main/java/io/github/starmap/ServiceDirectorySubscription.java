@@ -1,8 +1,6 @@
 package io.github.starmap;
 
-/**
- * 带本地目录缓存的 watch 订阅句柄。
- */
+/** 带本地目录缓存的 watch 订阅句柄。 */
 public interface ServiceDirectorySubscription extends RegistryWatchSubscription {
 
     /**

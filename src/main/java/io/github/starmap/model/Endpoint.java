@@ -6,9 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * StarMap 实例端点模型。
- */
+/** StarMap 实例端点模型。 */
 @Data
 @Builder(toBuilder = true)
 @NoArgsConstructor

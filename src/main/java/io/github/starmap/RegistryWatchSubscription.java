@@ -1,8 +1,6 @@
 package io.github.starmap;
 
-/**
- * StarMap watch 订阅句柄。
- */
+/** StarMap watch 订阅句柄。 */
 public interface RegistryWatchSubscription extends AutoCloseable {
 
     /**
@@ -12,9 +10,7 @@ public interface RegistryWatchSubscription extends AutoCloseable {
      */
     boolean isClosed();
 
-    /**
-     * 主动关闭 watch 订阅。
-     */
+    /** 主动关闭 watch 订阅。 */
     @Override
     void close();
 }

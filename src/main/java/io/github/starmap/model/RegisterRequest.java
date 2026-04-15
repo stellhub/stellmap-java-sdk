@@ -1,17 +1,14 @@
 package io.github.starmap.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import java.util.List;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-import java.util.Map;
-
-/**
- * StarMap 注册请求。
- */
+/** StarMap 注册请求。 */
 @Data
 @Builder(toBuilder = true)
 @NoArgsConstructor

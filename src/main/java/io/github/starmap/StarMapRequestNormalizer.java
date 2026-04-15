@@ -6,7 +6,6 @@ import io.github.starmap.model.HeartbeatRequest;
 import io.github.starmap.model.RegisterRequest;
 import io.github.starmap.model.RegistryQueryRequest;
 import io.github.starmap.model.RegistryWatchRequest;
-
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -15,9 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-/**
- * 请求参数归一化与服务标识组装器。
- */
+/** 请求参数归一化与服务标识组装器。 */
 final class StarMapRequestNormalizer {
 
     /**
@@ -35,15 +32,15 @@ final class StarMapRequestNormalizer {
         if (endpoints.isEmpty()) {
             throw new IllegalArgumentException("at least one endpoint is required");
         }
-        ExactServiceIdentity serviceIdentity = normalizeExactServiceIdentity(
-                request.getService(),
-                request.getOrganization(),
-                request.getBusinessDomain(),
-                request.getCapabilityDomain(),
-                request.getApplication(),
-                request.getRole(),
-                "service"
-        );
+        ExactServiceIdentity serviceIdentity =
+                normalizeExactServiceIdentity(
+                        request.getService(),
+                        request.getOrganization(),
+                        request.getBusinessDomain(),
+                        request.getCapabilityDomain(),
+                        request.getApplication(),
+                        request.getRole(),
+                        "service");
         return RegisterRequest.builder()
                 .namespace(requireText(request.getNamespace(), "namespace"))
                 .service(serviceIdentity.service())
@@ -57,7 +54,10 @@ final class StarMapRequestNormalizer {
                 .labels(normalizeMap(request.getLabels()))
                 .metadata(normalizeMap(request.getMetadata()))
                 .endpoints(endpoints)
-                .leaseTtlSeconds(request.getLeaseTtlSeconds() > 0 ? request.getLeaseTtlSeconds() : StarMapDefaults.DEFAULT_LEASE_TTL_SECONDS)
+                .leaseTtlSeconds(
+                        request.getLeaseTtlSeconds() > 0
+                                ? request.getLeaseTtlSeconds()
+                                : StarMapDefaults.DEFAULT_LEASE_TTL_SECONDS)
                 .build();
     }
 
@@ -69,15 +69,15 @@ final class StarMapRequestNormalizer {
      */
     DeregisterRequest normalizeDeregisterRequest(DeregisterRequest request) {
         Objects.requireNonNull(request, "request must not be null");
-        ExactServiceIdentity serviceIdentity = normalizeExactServiceIdentity(
-                request.getService(),
-                request.getOrganization(),
-                request.getBusinessDomain(),
-                request.getCapabilityDomain(),
-                request.getApplication(),
-                request.getRole(),
-                "service"
-        );
+        ExactServiceIdentity serviceIdentity =
+                normalizeExactServiceIdentity(
+                        request.getService(),
+                        request.getOrganization(),
+                        request.getBusinessDomain(),
+                        request.getCapabilityDomain(),
+                        request.getApplication(),
+                        request.getRole(),
+                        "service");
         return DeregisterRequest.builder()
                 .namespace(requireText(request.getNamespace(), "namespace"))
                 .service(serviceIdentity.service())
@@ -101,15 +101,15 @@ final class StarMapRequestNormalizer {
         if (request.getLeaseTtlSeconds() < 0) {
             throw new IllegalArgumentException("leaseTtlSeconds must be greater than or equal to 0");
         }
-        ExactServiceIdentity serviceIdentity = normalizeExactServiceIdentity(
-                request.getService(),
-                request.getOrganization(),
-                request.getBusinessDomain(),
-                request.getCapabilityDomain(),
-                request.getApplication(),
-                request.getRole(),
-                "service"
-        );
+        ExactServiceIdentity serviceIdentity =
+                normalizeExactServiceIdentity(
+                        request.getService(),
+                        request.getOrganization(),
+                        request.getBusinessDomain(),
+                        request.getCapabilityDomain(),
+                        request.getApplication(),
+                        request.getRole(),
+                        "service");
         return HeartbeatRequest.builder()
                 .namespace(requireText(request.getNamespace(), "namespace"))
                 .service(serviceIdentity.service())
@@ -150,16 +150,16 @@ final class StarMapRequestNormalizer {
         if (request.getLimit() != null && request.getLimit() < 0) {
             throw new IllegalArgumentException("limit must be greater than or equal to 0");
         }
-        ServiceFilterProjection serviceFilter = normalizeServiceFilter(
-                request.getService(),
-                request.getServices(),
-                request.getServicePrefixes(),
-                request.getOrganization(),
-                request.getBusinessDomain(),
-                request.getCapabilityDomain(),
-                request.getApplication(),
-                request.getRole()
-        );
+        ServiceFilterProjection serviceFilter =
+                normalizeServiceFilter(
+                        request.getService(),
+                        request.getServices(),
+                        request.getServicePrefixes(),
+                        request.getOrganization(),
+                        request.getBusinessDomain(),
+                        request.getCapabilityDomain(),
+                        request.getApplication(),
+                        request.getRole());
         return RegistryQueryRequest.builder()
                 .namespace(requireText(request.getNamespace(), "namespace"))
                 .service(serviceFilter.service())
@@ -189,16 +189,16 @@ final class StarMapRequestNormalizer {
         if (request.getSinceRevision() < 0L) {
             throw new IllegalArgumentException("sinceRevision must be greater than or equal to 0");
         }
-        ServiceFilterProjection serviceFilter = normalizeServiceFilter(
-                request.getService(),
-                request.getServices(),
-                request.getServicePrefixes(),
-                request.getOrganization(),
-                request.getBusinessDomain(),
-                request.getCapabilityDomain(),
-                request.getApplication(),
-                request.getRole()
-        );
+        ServiceFilterProjection serviceFilter =
+                normalizeServiceFilter(
+                        request.getService(),
+                        request.getServices(),
+                        request.getServicePrefixes(),
+                        request.getOrganization(),
+                        request.getBusinessDomain(),
+                        request.getCapabilityDomain(),
+                        request.getApplication(),
+                        request.getRole());
         return RegistryWatchRequest.builder()
                 .namespace(requireText(request.getNamespace(), "namespace"))
                 .service(serviceFilter.service())
@@ -225,8 +225,10 @@ final class StarMapRequestNormalizer {
      * @return watch 请求
      */
     RegistryWatchRequest toWatchRequest(RegistryQueryRequest request) {
-        List<String> services = request.getServices() != null ? request.getServices()
-                : (hasText(request.getService()) ? List.of(request.getService()) : null);
+        List<String> services =
+                request.getServices() != null
+                        ? request.getServices()
+                        : (hasText(request.getService()) ? List.of(request.getService()) : null);
         return RegistryWatchRequest.builder()
                 .namespace(request.getNamespace())
                 .service(request.getService())
@@ -296,7 +298,8 @@ final class StarMapRequestNormalizer {
      * @param includeSnapshot 是否包含快照
      * @return 查询字符串
      */
-    String buildWatchQuery(RegistryWatchRequest request, long sinceRevision, boolean includeSnapshot) {
+    String buildWatchQuery(
+            RegistryWatchRequest request, long sinceRevision, boolean includeSnapshot) {
         List<String> items = new ArrayList<>();
         addQuery(items, "namespace", request.getNamespace());
         addQuery(items, "service", request.getService());
@@ -366,14 +369,19 @@ final class StarMapRequestNormalizer {
             if (result.containsKey(name)) {
                 throw new IllegalArgumentException("duplicate endpoint name: " + name);
             }
-            result.put(name, Endpoint.builder()
-                    .name(name)
-                    .protocol(protocol)
-                    .host(host)
-                    .port(endpoint.getPort())
-                    .path(trimToNull(endpoint.getPath()))
-                    .weight(endpoint.getWeight() > 0 ? endpoint.getWeight() : StarMapDefaults.DEFAULT_ENDPOINT_WEIGHT)
-                    .build());
+            result.put(
+                    name,
+                    Endpoint.builder()
+                            .name(name)
+                            .protocol(protocol)
+                            .host(host)
+                            .port(endpoint.getPort())
+                            .path(trimToNull(endpoint.getPath()))
+                            .weight(
+                                    endpoint.getWeight() > 0
+                                            ? endpoint.getWeight()
+                                            : StarMapDefaults.DEFAULT_ENDPOINT_WEIGHT)
+                            .build());
         }
         return List.copyOf(result.values());
     }
@@ -383,12 +391,13 @@ final class StarMapRequestNormalizer {
             return null;
         }
         Map<String, String> result = new LinkedHashMap<>();
-        source.forEach((k, v) -> {
-            String normalizedKey = trimToNull(k);
-            if (normalizedKey != null) {
-                result.put(normalizedKey, v == null ? "" : v.trim());
-            }
-        });
+        source.forEach(
+                (k, v) -> {
+                    String normalizedKey = trimToNull(k);
+                    if (normalizedKey != null) {
+                        result.put(normalizedKey, v == null ? "" : v.trim());
+                    }
+                });
         return result.isEmpty() ? null : Map.copyOf(result);
     }
 
@@ -396,11 +405,8 @@ final class StarMapRequestNormalizer {
         if (values == null || values.isEmpty()) {
             return null;
         }
-        List<String> result = values.stream()
-                .map(this::trimToNull)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
+        List<String> result =
+                values.stream().map(this::trimToNull).filter(Objects::nonNull).distinct().toList();
         return result.isEmpty() ? null : result;
     }
 
@@ -411,8 +417,7 @@ final class StarMapRequestNormalizer {
             String capabilityDomain,
             String application,
             String role,
-            String fieldPrefix
-    ) {
+            String fieldPrefix) {
         String normalizedService = trimToNull(service);
         String normalizedOrganization = trimToNull(organization);
         String normalizedBusinessDomain = trimToNull(businessDomain);
@@ -420,7 +425,8 @@ final class StarMapRequestNormalizer {
         String normalizedApplication = trimToNull(application);
         String normalizedRole = trimToNull(role);
 
-        String[] parsed = normalizedService == null ? null : parseCanonicalServiceName(normalizedService);
+        String[] parsed =
+                normalizedService == null ? null : parseCanonicalServiceName(normalizedService);
         if (normalizedOrganization == null && parsed != null) {
             normalizedOrganization = parsed[0];
         }
@@ -437,19 +443,33 @@ final class StarMapRequestNormalizer {
             normalizedRole = parsed[4];
         }
 
-        if (hasAnyText(normalizedOrganization, normalizedBusinessDomain, normalizedCapabilityDomain, normalizedApplication, normalizedRole)) {
-            if (!hasAllText(normalizedOrganization, normalizedBusinessDomain, normalizedCapabilityDomain, normalizedApplication, normalizedRole)) {
-                throw new IllegalArgumentException(fieldPrefix + " hierarchy must include organization, businessDomain, capabilityDomain, application and role");
-            }
-            String canonicalService = composeCanonicalServiceName(
+        if (hasAnyText(
+                normalizedOrganization,
+                normalizedBusinessDomain,
+                normalizedCapabilityDomain,
+                normalizedApplication,
+                normalizedRole)) {
+            if (!hasAllText(
                     normalizedOrganization,
                     normalizedBusinessDomain,
                     normalizedCapabilityDomain,
                     normalizedApplication,
-                    normalizedRole
-            );
+                    normalizedRole)) {
+                throw new IllegalArgumentException(
+                        fieldPrefix
+                                + " hierarchy must include organization, businessDomain, capabilityDomain,"
+                                + " application and role");
+            }
+            String canonicalService =
+                    composeCanonicalServiceName(
+                            normalizedOrganization,
+                            normalizedBusinessDomain,
+                            normalizedCapabilityDomain,
+                            normalizedApplication,
+                            normalizedRole);
             if (normalizedService != null && !normalizedService.equals(canonicalService)) {
-                throw new IllegalArgumentException(fieldPrefix + " must match structured service identity: " + canonicalService);
+                throw new IllegalArgumentException(
+                        fieldPrefix + " must match structured service identity: " + canonicalService);
             }
             normalizedService = canonicalService;
         }
@@ -463,8 +483,7 @@ final class StarMapRequestNormalizer {
                 normalizedBusinessDomain,
                 normalizedCapabilityDomain,
                 normalizedApplication,
-                normalizedRole
-        );
+                normalizedRole);
     }
 
     private ServiceFilterProjection normalizeServiceFilter(
@@ -475,8 +494,7 @@ final class StarMapRequestNormalizer {
             String businessDomain,
             String capabilityDomain,
             String application,
-            String role
-    ) {
+            String role) {
         String normalizedService = trimToNull(service);
         List<String> normalizedServices = normalizeStrings(services);
         List<String> normalizedPrefixes = normalizeStrings(servicePrefixes);
@@ -486,7 +504,8 @@ final class StarMapRequestNormalizer {
         String normalizedApplication = trimToNull(application);
         String normalizedRole = trimToNull(role);
 
-        String[] parsed = normalizedService == null ? null : parseCanonicalServiceName(normalizedService);
+        String[] parsed =
+                normalizedService == null ? null : parseCanonicalServiceName(normalizedService);
         if (normalizedOrganization == null && parsed != null) {
             normalizedOrganization = parsed[0];
         }
@@ -503,31 +522,48 @@ final class StarMapRequestNormalizer {
             normalizedRole = parsed[4];
         }
 
-        if (hasAnyText(normalizedOrganization, normalizedBusinessDomain, normalizedCapabilityDomain, normalizedApplication, normalizedRole)) {
-            if (hasHierarchyGap(normalizedOrganization, normalizedBusinessDomain, normalizedCapabilityDomain, normalizedApplication, normalizedRole)) {
-                throw new IllegalArgumentException("service hierarchy filters must be contiguous from organization to role");
+        if (hasAnyText(
+                normalizedOrganization,
+                normalizedBusinessDomain,
+                normalizedCapabilityDomain,
+                normalizedApplication,
+                normalizedRole)) {
+            if (hasHierarchyGap(
+                    normalizedOrganization,
+                    normalizedBusinessDomain,
+                    normalizedCapabilityDomain,
+                    normalizedApplication,
+                    normalizedRole)) {
+                throw new IllegalArgumentException(
+                        "service hierarchy filters must be contiguous from organization to role");
             }
-            if (hasAllText(normalizedOrganization, normalizedBusinessDomain, normalizedCapabilityDomain, normalizedApplication, normalizedRole)) {
-                String canonicalService = composeCanonicalServiceName(
-                        normalizedOrganization,
-                        normalizedBusinessDomain,
-                        normalizedCapabilityDomain,
-                        normalizedApplication,
-                        normalizedRole
-                );
+            if (hasAllText(
+                    normalizedOrganization,
+                    normalizedBusinessDomain,
+                    normalizedCapabilityDomain,
+                    normalizedApplication,
+                    normalizedRole)) {
+                String canonicalService =
+                        composeCanonicalServiceName(
+                                normalizedOrganization,
+                                normalizedBusinessDomain,
+                                normalizedCapabilityDomain,
+                                normalizedApplication,
+                                normalizedRole);
                 if (normalizedService != null && !normalizedService.equals(canonicalService)) {
-                    throw new IllegalArgumentException("service must match structured service identity: " + canonicalService);
+                    throw new IllegalArgumentException(
+                            "service must match structured service identity: " + canonicalService);
                 }
                 normalizedService = canonicalService;
                 normalizedServices = appendUnique(normalizedServices, canonicalService);
             } else {
-                String prefix = composeHierarchyPrefix(
-                        normalizedOrganization,
-                        normalizedBusinessDomain,
-                        normalizedCapabilityDomain,
-                        normalizedApplication,
-                        normalizedRole
-                );
+                String prefix =
+                        composeHierarchyPrefix(
+                                normalizedOrganization,
+                                normalizedBusinessDomain,
+                                normalizedCapabilityDomain,
+                                normalizedApplication,
+                                normalizedRole);
                 normalizedPrefixes = appendUnique(normalizedPrefixes, prefix);
             }
         }
@@ -540,8 +576,7 @@ final class StarMapRequestNormalizer {
                 normalizedBusinessDomain,
                 normalizedCapabilityDomain,
                 normalizedApplication,
-                normalizedRole
-        );
+                normalizedRole);
     }
 
     private List<String> appendUnique(List<String> values, String value) {
@@ -561,9 +596,9 @@ final class StarMapRequestNormalizer {
             String businessDomain,
             String capabilityDomain,
             String application,
-            String role
-    ) {
-        return String.join(".",
+            String role) {
+        return String.join(
+                ".",
                 organization.trim(),
                 businessDomain.trim(),
                 capabilityDomain.trim(),
@@ -576,8 +611,7 @@ final class StarMapRequestNormalizer {
             String businessDomain,
             String capabilityDomain,
             String application,
-            String role
-    ) {
+            String role) {
         List<String> parts = new ArrayList<>(5);
         if (hasText(organization)) {
             parts.add(organization.trim());
@@ -597,9 +631,15 @@ final class StarMapRequestNormalizer {
         return String.join(".", parts);
     }
 
-    private boolean hasHierarchyGap(String organization, String businessDomain, String capabilityDomain, String application, String role) {
+    private boolean hasHierarchyGap(
+            String organization,
+            String businessDomain,
+            String capabilityDomain,
+            String application,
+            String role) {
         boolean seenEmpty = false;
-        for (String value : new String[]{organization, businessDomain, capabilityDomain, application, role}) {
+        for (String value :
+                new String[] {organization, businessDomain, capabilityDomain, application, role}) {
             if (!hasText(value)) {
                 seenEmpty = true;
                 continue;
@@ -672,9 +712,7 @@ final class StarMapRequestNormalizer {
             String businessDomain,
             String capabilityDomain,
             String application,
-            String role
-    ) {
-    }
+            String role) {}
 
     private record ServiceFilterProjection(
             String service,
@@ -684,7 +722,5 @@ final class StarMapRequestNormalizer {
             String businessDomain,
             String capabilityDomain,
             String application,
-            String role
-    ) {
-    }
+            String role) {}
 }
