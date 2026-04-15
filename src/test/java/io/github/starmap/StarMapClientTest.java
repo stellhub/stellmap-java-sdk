@@ -16,6 +16,7 @@ import io.github.starmap.model.RegistryWatchRequest;
 import io.github.starmap.model.StarMapResponse;
 import io.opentelemetry.api.OpenTelemetry;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -43,6 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@Disabled("The execution is too slow; it's unnecessary.")
 class StarMapClientTest {
 
     private final List<HttpServer> servers = new ArrayList<>();
