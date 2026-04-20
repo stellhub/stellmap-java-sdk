@@ -4,14 +4,14 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>io.github.stellaraxis</groupId>
-    <artifactId>starmap-java-sdk</artifactId>
+    <groupId>io.github.stellhub</groupId>
+    <artifactId>stellmap-java-sdk</artifactId>
     <version>0.0.1</version>
     <packaging>jar</packaging>
 
     <name>${project.groupId}:${project.artifactId}</name>
-    <description>Java SDK for StarMap service registry, covering registration, heartbeat, discovery, and watch APIs.</description>
-    <url>https://github.com/stellaraxis/starmap-java-sdk</url>
+    <description>Java SDK for stellmap service registry, covering registration, heartbeat, discovery, and watch APIs.</description>
+    <url>https://github.com/stellhub/stellmap-java-sdk</url>
 
     <licenses>
         <license>
@@ -23,18 +23,18 @@
 
     <developers>
         <developer>
-            <id>stellaraxis</id>
-            <name>stellaraxis</name>
-            <email>stellaraxis.builder@gmail.com</email>
+            <id>stellhub</id>
+            <name>stellhub</name>
+            <email>xiaoyaoyunlian@gmail.com</email>
             <organization>GitHub</organization>
-            <organizationUrl>https://github.com/stellaraxis</organizationUrl>
+            <organizationUrl>https://github.com/stellhub</organizationUrl>
         </developer>
     </developers>
 
     <scm>
-        <connection>scm:git:https://github.com/stellaraxis/starmap-java-sdk.git</connection>
-        <developerConnection>scm:git:git@github.com:stellaraxis/starmap-java-sdk.git</developerConnection>
-        <url>https://github.com/stellaraxis/starmap-java-sdk</url>
+        <connection>scm:git:https://github.com/stellhub/stellmap-java-sdk.git</connection>
+        <developerConnection>scm:git:git@github.com:stellhub/stellmap-java-sdk.git</developerConnection>
+        <url>https://github.com/stellhub/stellmap-java-sdk</url>
         <tag>HEAD</tag>
     </scm>
 
@@ -221,7 +221,7 @@
                         </executions>
                         <configuration>
                             <bestPractices>true</bestPractices>
-                            <keyname>3063C3A3F03FE483526EEDAFDC495D07B623C2EA</keyname>
+                            <keyname>9A870D0CDDB6C964F6467C19D6CC5A07420EBBBE</keyname>
                             <gpgArguments>
                                 <arg>--pinentry-mode</arg>
                                 <arg>loopback</arg>
