@@ -1,12 +1,12 @@
-# StarMap Java SDK
+# StellMap Java SDK
 
-StarMap Java SDK 用于服务注册与服务发现。
+StellMap Java SDK 用于服务注册与服务发现。
 
 这个 SDK 的设计目标不是单纯发几个 HTTP 请求，而是为业务服务、网关、边车、控制面组件提供一套稳定的注册、发现与变更感知能力。在小规模场景下，注册与查询只需要同步请求；在大规模场景下，尤其是网关一次关注成千上万个下游服务时，SDK 必须具备更强的长连接管理、事件流处理和后续本地缓存扩展能力。
 
 ## 1. SDK 最终设计目标
 
-StarMap Java SDK 的最终目标如下：
+StellMap Java SDK 的最终目标如下：
 
 1. 提供稳定的服务注册、注销、心跳与实例查询能力。
 2. 提供面向大规模服务发现的 watch 能力，而不是只面向单个服务的简单长连接订阅。
@@ -21,7 +21,7 @@ StarMap Java SDK 的最终目标如下：
 
 当前版本已经将传输层从 JDK `java.net.http.HttpClient` 切换到 Netty。
 
-切换原因不是因为 `HttpClient` 完全不能用，而是因为 StarMap SDK 的长期目标已经超出了“普通 HTTP 客户端”的舒适区：
+切换原因不是因为 `HttpClient` 完全不能用，而是因为 StellMap SDK 的长期目标已经超出了“普通 HTTP 客户端”的舒适区：
 
 1. 注册、注销、心跳、查询属于普通请求，`HttpClient` 可以胜任。
 2. 但 watch 属于长连接事件流，未来需要承担更多目录订阅、连接恢复、事件续传和批量服务感知能力。
@@ -35,7 +35,7 @@ StarMap Java SDK 的最终目标如下：
 3. 需要把普通同步请求和持续 watch 连接放到统一网络栈中管理。
 4. 需要为未来的高并发目录推送、更多协议扩展和更细粒度的连接控制做准备。
 
-结论不是“Netty 永远比 HttpClient 好”，而是：**对于 StarMap SDK 这种以服务目录 watch 为核心长期能力的客户端，Netty 更符合最终演进方向。**
+结论不是“Netty 永远比 HttpClient 好”，而是：**对于 StellMap SDK 这种以服务目录 watch 为核心长期能力的客户端，Netty 更符合最终演进方向。**
 
 ## 3. 当前实现与目标设计
 
@@ -291,7 +291,7 @@ ServiceDirectorySubscription watchDirectory(
 
 推荐架构分层如下：
 
-1. `StarMapClient`
+1. `StellMapClient`
    负责注册、注销、心跳、查询和底层 watch 连接管理。
 2. `ManagedDirectoryWatchSubscription`
    负责自动重连、revision 续传、订阅恢复。
@@ -308,23 +308,23 @@ ServiceDirectorySubscription watchDirectory(
 
 ## 10. 资源与指标配置
 
-当前版本的 `StarMapClient` 还支持以下资源和指标控制能力：
+当前版本的 `StellMapClient` 还支持以下资源和指标控制能力：
 
 1. `autoDeregisterOnClose`
    允许在 `close()` 时对当前客户端成功注册过的实例执行自动注销。
-   这个能力默认关闭，因为 `StarMapClient` 也可能只是纯发现客户端。
+   这个能力默认关闭，因为 `StellMapClient` 也可能只是纯发现客户端。
 2. `watchCallbackExecutor`
    允许业务方传入自己的 watch 回调线程池，便于统一线程池治理和指标采集。
 3. `OpenTelemetry`
-   `StarMapClient` 构造器支持显式传入 `OpenTelemetry`，用于构建请求量、请求时延、心跳量、心跳时延、watch 事件量、watch 重连次数、活动订阅数、本地目录缓存规模和自动注销等指标。
+   `StellMapClient` 构造器支持显式传入 `OpenTelemetry`，用于构建请求量、请求时延、心跳量、心跳时延、watch 事件量、watch 重连次数、活动订阅数、本地目录缓存规模和自动注销等指标。
 4. `NettyEventLoopOptions`
    允许业务方配置 `NioEventLoopGroup` 的线程数、执行器、chooser factory、selector provider、select strategy、拒绝策略以及任务队列工厂。
 
-这些能力的设计目标是：**把 StarMapClient 从“可用”提升到“可运营、可观测、可治理”。**
+这些能力的设计目标是：**把 StellMapClient 从“可用”提升到“可运营、可观测、可治理”。**
 
 ## 11. 结论
 
-StarMap Java SDK 的设计目的，是让服务注册与服务发现不仅“可调用”，更要“可持续运行”。
+StellMap Java SDK 的设计目的，是让服务注册与服务发现不仅“可调用”，更要“可持续运行”。
 
 因此本项目的选型与设计基线如下：
 
@@ -341,8 +341,8 @@ StarMap Java SDK 的设计目的，是让服务注册与服务发现不仅“可
 单服务 watch：
 
 ```java
-StarMapClient client = new StarMapClient(
-        StarMapClientOptions.builder()
+StellMapClient client = new StellMapClient(
+        StellMapClientOptions.builder()
                 .baseUrl("http://127.0.0.1:8080")
                 .watchAutoReconnect(true)
                 .watchReconnectInitialDelay(Duration.ofSeconds(1))
