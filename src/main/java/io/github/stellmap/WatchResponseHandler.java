@@ -2,125 +2,97 @@ package io.github.stellmap;
 
 import io.github.stellmap.exception.StellMapTransportException;
 import io.github.stellmap.model.RegistryWatchEvent;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpObject;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.LastHttpContent;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
 
 /** 负责解析 watch SSE 响应流。 */
-final class WatchResponseHandler extends SimpleChannelInboundHandler<HttpObject> {
+final class WatchResponseHandler {
 
     private final StellMapClient owner;
     private final ManagedDirectoryWatchSubscription subscription;
-    private final HttpRequest request;
     private final ByteArrayOutputStream lineBuffer = new ByteArrayOutputStream();
-    private final ByteArrayOutputStream errorBuffer = new ByteArrayOutputStream();
     private final StringBuilder data = new StringBuilder();
     private final boolean reconnectAttempt;
     private String eventName;
     private String eventId;
-    private boolean streamOpened;
-    private int statusCode;
-    private Throwable terminalFailure;
 
     WatchResponseHandler(
             StellMapClient owner,
             ManagedDirectoryWatchSubscription subscription,
-            HttpRequest request,
             boolean reconnectAttempt) {
         this.owner = owner;
         this.subscription = subscription;
-        this.request = request;
         this.reconnectAttempt = reconnectAttempt;
     }
 
-    @Override
-    public void channelActive(ChannelHandlerContext context) {
-        context
-                .writeAndFlush(request)
-                .addListener(
-                        future -> {
-                            if (!future.isSuccess()) {
-                                subscription.handleConnectAttemptFailed(
-                                        reconnectAttempt,
-                                        new StellMapTransportException(
-                                                "Failed to send StarMap watch request", future.cause()));
-                                context.close();
-                            }
-                        });
-    }
-
-    @Override
-    protected void channelRead0(ChannelHandlerContext context, HttpObject message) throws Exception {
-        if (message instanceof HttpResponse response) {
-            statusCode = response.status().code();
-            if (owner.transportInternal().isSuccess(statusCode)) {
-                streamOpened = true;
-                subscription.handleStreamOpen(context.channel());
-            }
-        }
-
-        if (message instanceof HttpContent content) {
-            if (!streamOpened) {
-                errorBuffer.write(ByteBufUtil.getBytes(content.content()));
-                if (content instanceof LastHttpContent) {
-                    terminalFailure =
-                            owner
-                                    .transportInternal()
-                                    .buildServerException(statusCode, errorBuffer.toString(StandardCharsets.UTF_8));
-                    context.close();
-                }
+    /**
+     * 读取并解析 SSE 响应流。
+     *
+     * @param response OkHttp 响应
+     */
+    void handle(Response response) {
+        boolean streamOpened = false;
+        Throwable terminalFailure = null;
+        try {
+            if (!owner.transportInternal().isSuccess(response.code())) {
+                terminalFailure =
+                        owner.transportInternal()
+                                .buildServerException(response.code(), readBody(response.body()));
+                subscription.handleConnectAttemptFailed(reconnectAttempt, terminalFailure);
                 return;
             }
 
-            consumeSseBytes(content.content());
-            if (content instanceof LastHttpContent) {
+            ResponseBody body = response.body();
+            if (body == null) {
+                terminalFailure = new StellMapTransportException("StarMap watch stream body is empty");
+                subscription.handleConnectAttemptFailed(reconnectAttempt, terminalFailure);
+                return;
+            }
+
+            streamOpened = true;
+            subscription.handleStreamOpen();
+            readSse(body.byteStream());
+        } catch (IOException e) {
+            terminalFailure = new StellMapTransportException("Failed to read StarMap watch stream", e);
+        } catch (RuntimeException e) {
+            terminalFailure = new StellMapTransportException("Failed to process StarMap watch stream", e);
+        } finally {
+            if (streamOpened) {
                 finalizePendingLine();
                 publishPendingEvent();
-                context.close();
+                subscription.handleStreamClosed(reconnectAttempt, true, terminalFailure);
             }
         }
-    }
-
-    @Override
-    public void channelInactive(ChannelHandlerContext context) {
-        subscription.handleStreamClosed(
-                context.channel(), reconnectAttempt, streamOpened, terminalFailure);
-    }
-
-    @Override
-    public void exceptionCaught(ChannelHandlerContext context, Throwable cause) {
-        terminalFailure = new StellMapTransportException("Failed to read StarMap watch stream", cause);
-        context.close();
     }
 
     /**
-     * Incrementally decodes SSE lines and keeps UTF-8 boundaries intact.
+     * 增量解析 SSE 字节流，保留 UTF-8 边界。
      *
-     * @param content Netty content buffer
+     * @param inputStream 响应输入流
+     * @throws IOException IO 异常
      */
-    private void consumeSseBytes(ByteBuf content) throws IOException {
-        byte[] bytes = ByteBufUtil.getBytes(content);
-        for (byte currentByte : bytes) {
-            if (currentByte == '\n') {
-                processLineBytes();
-                continue;
-            }
-            if (currentByte != '\r') {
-                lineBuffer.write(currentByte);
+    private void readSse(InputStream inputStream) throws IOException {
+        byte[] chunk = new byte[1024];
+        int read;
+        while ((read = inputStream.read(chunk)) >= 0) {
+            for (int index = 0; index < read; index++) {
+                byte currentByte = chunk[index];
+                if (currentByte == '\n') {
+                    processLineBytes();
+                    continue;
+                }
+                if (currentByte != '\r') {
+                    lineBuffer.write(currentByte);
+                }
             }
         }
     }
 
-    /** Flushes the last SSE line when the channel closes without trailing LF. */
+    /** Flushes the last SSE line when the stream closes without trailing LF. */
     private void finalizePendingLine() {
         if (lineBuffer.size() > 0) {
             processLineBytes();
@@ -179,5 +151,12 @@ final class WatchResponseHandler extends SimpleChannelInboundHandler<HttpObject>
             eventName = null;
             eventId = null;
         }
+    }
+
+    private String readBody(ResponseBody body) throws IOException {
+        if (body == null) {
+            return "";
+        }
+        return body.string();
     }
 }

@@ -5,13 +5,6 @@ import io.github.stellmap.exception.StellMapTransportException;
 import io.github.stellmap.model.RegistryWatchEvent;
 import io.github.stellmap.model.RegistryWatchRequest;
 import io.github.stellmap.model.StarMapErrorResponse;
-import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.http.HttpClientCodec;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Objects;
@@ -23,6 +16,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import okhttp3.Call;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,12 +29,12 @@ final class ManagedDirectoryWatchSubscription implements ServiceDirectorySubscri
             LoggerFactory.getLogger(ManagedDirectoryWatchSubscription.class);
 
     private final StellMapClient owner;
-    private final NettyHttpTransport transport;
+    private final HttpTransport transport;
     private final RegistryWatchRequest request;
     private final RegistryWatchListener listener;
     private final OrderedCallbackDispatcher dispatcher;
     private final DefaultServiceDirectory directory = new DefaultServiceDirectory();
-    private final AtomicReference<Channel> channelRef = new AtomicReference<>();
+    private final AtomicReference<Call> callRef = new AtomicReference<>();
     private final AtomicReference<ScheduledFuture<?>> reconnectFutureRef = new AtomicReference<>();
     private final AtomicBoolean closed = new AtomicBoolean(false);
     private final AtomicBoolean terminated = new AtomicBoolean(false);
@@ -107,12 +103,14 @@ final class ManagedDirectoryWatchSubscription implements ServiceDirectorySubscri
         handleReconnectableFailure(failure);
     }
 
-    void handleStreamOpen(Channel channel) {
+    void handleStreamOpen() {
         if (closed.get()) {
-            channel.close();
+            Call call = callRef.get();
+            if (call != null) {
+                call.cancel();
+            }
             return;
         }
-        channelRef.set(channel);
         cancelReconnect();
         reconnectAttempts.set(0);
         initialConnected.set(true);
@@ -165,9 +163,7 @@ final class ManagedDirectoryWatchSubscription implements ServiceDirectorySubscri
         dispatcher.dispatch(() -> listener.onError(throwable));
     }
 
-    void handleStreamClosed(
-            Channel channel, boolean reconnectAttempt, boolean streamOpened, Throwable failure) {
-        channelRef.compareAndSet(channel, null);
+    void handleStreamClosed(boolean reconnectAttempt, boolean streamOpened, Throwable failure) {
         if (closed.get()) {
             terminate();
             return;
@@ -205,22 +201,6 @@ final class ManagedDirectoryWatchSubscription implements ServiceDirectorySubscri
                                 + owner
                                         .requestNormalizerInternal()
                                         .buildWatchQuery(request, sinceRevision, includeSnapshot));
-        Bootstrap bootstrap =
-                transport.newBootstrap(
-                        new ChannelInitializer<>() {
-                            @Override
-                            protected void initChannel(SocketChannel channel) {
-                                ChannelPipeline pipeline = channel.pipeline();
-                                transport.configureSsl(channel, watchUri, pipeline);
-                                pipeline.addLast(new HttpClientCodec());
-                                pipeline.addLast(
-                                        new WatchResponseHandler(
-                                                owner,
-                                                ManagedDirectoryWatchSubscription.this,
-                                                transport.buildWatchRequest(watchUri),
-                                                reconnectAttempt));
-                            }
-                        });
         log.debug(
                 "Opening watch stream namespace={}, services={}, servicePrefixes={}, sinceRevision={},"
                         + " includeSnapshot={}, reconnectAttempt={}",
@@ -230,17 +210,30 @@ final class ManagedDirectoryWatchSubscription implements ServiceDirectorySubscri
                 sinceRevision,
                 includeSnapshot,
                 reconnectAttempt);
+        try {
+            owner.watchExecutorInternal().execute(() -> openWatchStream(watchUri, reconnectAttempt));
+        } catch (RuntimeException e) {
+            handleConnectAttemptFailed(
+                    reconnectAttempt,
+                    new StellMapTransportException("Failed to submit StarMap watch stream task", e));
+        }
+    }
 
-        ChannelFuture connectFuture = bootstrap.connect(watchUri.getHost(), transport.portOf(watchUri));
-        connectFuture.addListener(
-                future -> {
-                    if (!future.isSuccess()) {
-                        handleConnectAttemptFailed(
-                                reconnectAttempt,
-                                new StellMapTransportException(
-                                        "Failed to open StarMap watch stream", future.cause()));
-                    }
-                });
+    private void openWatchStream(URI watchUri, boolean reconnectAttempt) {
+        Request request = transport.buildWatchRequest(watchUri);
+        Call call = transport.newCall(request);
+        callRef.set(call);
+        try (Response response = call.execute()) {
+            new WatchResponseHandler(owner, this, reconnectAttempt).handle(response);
+        } catch (Exception e) {
+            if (!closed.get()) {
+                handleConnectAttemptFailed(
+                        reconnectAttempt,
+                        new StellMapTransportException("Failed to open StarMap watch stream", e));
+            }
+        } finally {
+            callRef.compareAndSet(call, null);
+        }
     }
 
     private void handleReconnectableFailure(Throwable failure) {
@@ -294,9 +287,7 @@ final class ManagedDirectoryWatchSubscription implements ServiceDirectorySubscri
                 failure.toString());
         dispatcher.dispatch(() -> listener.onError(failure));
         ScheduledFuture<?> reconnectFuture =
-                owner
-                        .eventLoopGroupInternal()
-                        .next()
+                owner.watchReconnectExecutorInternal()
                         .schedule(() -> connect(true), delay.toMillis(), TimeUnit.MILLISECONDS);
         replaceReconnectFuture(reconnectFuture);
     }
@@ -367,9 +358,9 @@ final class ManagedDirectoryWatchSubscription implements ServiceDirectorySubscri
             return;
         }
         cancelReconnect();
-        Channel channel = channelRef.getAndSet(null);
-        if (channel != null) {
-            channel.close();
+        Call call = callRef.getAndSet(null);
+        if (call != null) {
+            call.cancel();
         }
         if (!initialOpenFuture.isDone()) {
             initialOpenFuture.completeExceptionally(

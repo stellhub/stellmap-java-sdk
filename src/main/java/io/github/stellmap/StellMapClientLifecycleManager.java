@@ -1,8 +1,8 @@
 package io.github.stellmap;
 
-import io.netty.channel.EventLoopGroup;
 import java.net.URI;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,26 +14,35 @@ final class StellMapClientLifecycleManager {
     private final URI baseUri;
     private final boolean autoDeregisterOnClose;
     private final StellMapHeartbeatManager heartbeatManager;
+    private final HttpTransport transport;
+    private final ExecutorService watchExecutor;
+    private final boolean ownsWatchExecutor;
+    private final ScheduledExecutorService watchReconnectExecutor;
+    private final boolean ownsWatchReconnectExecutor;
     private final ExecutorService watchCallbackExecutor;
     private final boolean ownsWatchCallbackExecutor;
-    private final EventLoopGroup eventLoopGroup;
-    private final boolean ownsEventLoopGroup;
 
     StellMapClientLifecycleManager(
             URI baseUri,
             boolean autoDeregisterOnClose,
             StellMapHeartbeatManager heartbeatManager,
+            HttpTransport transport,
+            ExecutorService watchExecutor,
+            boolean ownsWatchExecutor,
+            ScheduledExecutorService watchReconnectExecutor,
+            boolean ownsWatchReconnectExecutor,
             ExecutorService watchCallbackExecutor,
-            boolean ownsWatchCallbackExecutor,
-            EventLoopGroup eventLoopGroup,
-            boolean ownsEventLoopGroup) {
+            boolean ownsWatchCallbackExecutor) {
         this.baseUri = baseUri;
         this.autoDeregisterOnClose = autoDeregisterOnClose;
         this.heartbeatManager = heartbeatManager;
+        this.transport = transport;
+        this.watchExecutor = watchExecutor;
+        this.ownsWatchExecutor = ownsWatchExecutor;
+        this.watchReconnectExecutor = watchReconnectExecutor;
+        this.ownsWatchReconnectExecutor = ownsWatchReconnectExecutor;
         this.watchCallbackExecutor = watchCallbackExecutor;
         this.ownsWatchCallbackExecutor = ownsWatchCallbackExecutor;
-        this.eventLoopGroup = eventLoopGroup;
-        this.ownsEventLoopGroup = ownsEventLoopGroup;
     }
 
     /** 关闭客户端生命周期资源。 */
@@ -44,11 +53,15 @@ final class StellMapClientLifecycleManager {
                 heartbeatManager.trackedRegistrationCount(),
                 heartbeatManager.scheduledHeartbeatCount());
         RuntimeException closeFailure = heartbeatManager.shutdown(autoDeregisterOnClose);
+        transport.close();
+        if (ownsWatchExecutor) {
+            watchExecutor.shutdownNow();
+        }
+        if (ownsWatchReconnectExecutor) {
+            watchReconnectExecutor.shutdownNow();
+        }
         if (ownsWatchCallbackExecutor) {
             watchCallbackExecutor.shutdownNow();
-        }
-        if (ownsEventLoopGroup) {
-            eventLoopGroup.shutdownGracefully().syncUninterruptibly();
         }
         log.info("Closed StellMapClient baseUrl={}", baseUri);
         if (closeFailure != null) {

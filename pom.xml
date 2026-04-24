@@ -6,7 +6,7 @@
 
     <groupId>io.github.stellhub</groupId>
     <artifactId>stellmap-java-sdk</artifactId>
-    <version>0.0.1</version>
+    <version>0.0.2</version>
     <packaging>jar</packaging>
 
     <name>${project.groupId}:${project.artifactId}</name>
@@ -44,7 +44,6 @@
         <jackson.version>2.21.2</jackson.version>
         <junit.version>5.13.4</junit.version>
         <lombok.version>1.18.44</lombok.version>
-        <netty.version>4.1.132.Final</netty.version>
         <opentelemetry.version>1.60.1</opentelemetry.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -64,14 +63,9 @@
             <version>${jackson.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-codec-http</artifactId>
-            <version>${netty.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-handler</artifactId>
-            <version>${netty.version}</version>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>4.12.0</version>
         </dependency>
         <dependency>
             <groupId>io.opentelemetry</groupId>

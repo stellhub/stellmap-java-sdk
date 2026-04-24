@@ -12,7 +12,6 @@ import io.github.stellmap.model.RegistryQueryRequest;
 import io.github.stellmap.model.RegistryWatchEvent;
 import io.github.stellmap.model.RegistryWatchRequest;
 import io.github.stellmap.model.StarMapResponse;
-import io.netty.channel.EventLoopGroup;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
 import java.net.URI;
@@ -20,6 +19,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +33,7 @@ public class StellMapClient implements AutoCloseable {
     private static final String INSTANCES_PATH = "/api/v1/registry/instances";
     private static final String INSTRUMENTATION_NAME = "io.github.starmap";
     private static final String INSTRUMENTATION_VERSION = "0.0.1";
-    private static final NettyClientFactory NETTY_CLIENT_FACTORY = new NettyClientFactory();
+    private static final HttpClientFactory NETTY_CLIENT_FACTORY = new HttpClientFactory();
     private static final StellMapClientSettingsNormalizer SETTINGS_NORMALIZER =
             new StellMapClientSettingsNormalizer();
     static final ObjectMapper OBJECT_MAPPER =
@@ -49,9 +49,10 @@ public class StellMapClient implements AutoCloseable {
     private final Duration watchReconnectMaxDelay;
     private final int watchReconnectMaxAttempts;
     private final StarMapClientMetrics metrics;
-    private final EventLoopGroup eventLoopGroup;
+    private final ExecutorService watchExecutor;
+    private final ScheduledExecutorService watchReconnectExecutor;
     private final ExecutorService watchCallbackExecutor;
-    private final NettyHttpTransport httpTransport;
+    private final HttpTransport httpTransport;
     private final StellMapHeartbeatManager heartbeatManager;
     private final StellMapClientLifecycleManager lifecycleManager;
     private static final RegistryWatchListener NOOP_WATCH_LISTENER =
@@ -61,32 +62,10 @@ public class StellMapClient implements AutoCloseable {
             };
 
     public StellMapClient(StellMapClientOptions options) {
-        this(options, null, null);
+        this(options, null);
     }
 
     public StellMapClient(StellMapClientOptions options, OpenTelemetry openTelemetry) {
-        this(options, null, openTelemetry);
-    }
-
-    /**
-     * 基于 Netty EventLoopGroup 构建客户端。
-     *
-     * @param options 客户端配置
-     * @param eventLoopGroup 可选外部 EventLoopGroup
-     */
-    public StellMapClient(StellMapClientOptions options, EventLoopGroup eventLoopGroup) {
-        this(options, eventLoopGroup, null);
-    }
-
-    /**
-     * 基于 Netty EventLoopGroup 与 OpenTelemetry 构建客户端。
-     *
-     * @param options 客户端配置
-     * @param eventLoopGroup 可选外部 EventLoopGroup
-     * @param openTelemetry 可选 OpenTelemetry
-     */
-    public StellMapClient(
-            StellMapClientOptions options, EventLoopGroup eventLoopGroup, OpenTelemetry openTelemetry) {
         StellMapClientSettingsNormalizer.NormalizedClientSettings normalizedSettings =
                 SETTINGS_NORMALIZER.normalize(options);
         this.baseUri = normalizedSettings.baseUri();
@@ -100,21 +79,21 @@ public class StellMapClient implements AutoCloseable {
         this.metrics =
                 new StarMapClientMetrics(
                         effectiveOpenTelemetry, INSTRUMENTATION_NAME, INSTRUMENTATION_VERSION);
-        NettyClientFactory.ClientResources clientResources =
+        HttpClientFactory.ClientResources clientResources =
                 NETTY_CLIENT_FACTORY.createResources(
-                        new NettyClientFactory.ClientSettings(
+                        new HttpClientFactory.ClientSettings(
                                 this.baseUri,
                                 normalizedSettings.requestTimeout(),
                                 normalizedSettings.followLeaderRedirect(),
                                 this.maxLeaderRedirects,
                                 normalizedSettings.autoDeregisterOnClose(),
                                 normalizedSettings.defaultHeaders(),
-                                eventLoopGroup,
                                 options.getWatchCallbackExecutor(),
                                 options.getHeartbeatExecutor(),
-                                options.getNettyEventLoopOptions(),
+                                options.getHttpOptions(),
                                 this.metrics));
-        this.eventLoopGroup = clientResources.eventLoopGroup();
+        this.watchExecutor = clientResources.watchExecutor();
+        this.watchReconnectExecutor = clientResources.watchReconnectExecutor();
         this.watchCallbackExecutor = clientResources.watchCallbackExecutor();
         this.httpTransport = clientResources.httpTransport();
         this.heartbeatManager = clientResources.heartbeatManager();
@@ -350,8 +329,12 @@ public class StellMapClient implements AutoCloseable {
         return baseUri;
     }
 
-    EventLoopGroup eventLoopGroupInternal() {
-        return eventLoopGroup;
+    ExecutorService watchExecutorInternal() {
+        return watchExecutor;
+    }
+
+    ScheduledExecutorService watchReconnectExecutorInternal() {
+        return watchReconnectExecutor;
     }
 
     ExecutorService watchCallbackExecutorInternal() {
@@ -378,7 +361,7 @@ public class StellMapClient implements AutoCloseable {
         return metrics;
     }
 
-    NettyHttpTransport transportInternal() {
+    HttpTransport transportInternal() {
         return httpTransport;
     }
 

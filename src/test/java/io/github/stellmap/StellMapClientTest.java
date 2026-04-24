@@ -1049,14 +1049,14 @@ class StellMapClientTest {
     }
 
     @Test
-    void shouldSupportCustomNettyEventLoopOptionsAndOpenTelemetryConstructor() throws Exception {
+    void shouldSupportCustomWatchRuntimeOptionsAndOpenTelemetryConstructor() throws Exception {
         AtomicInteger requestCalls = new AtomicInteger();
-        ExecutorService nettyExecutor = Executors.newSingleThreadExecutor(runnable -> {
+        ExecutorService watchExecutor = Executors.newSingleThreadExecutor(runnable -> {
             Thread thread = new Thread(runnable);
-            thread.setName("starmap-test-netty");
+            thread.setName("starmap-test-watch");
             return thread;
         });
-        executors.add(nettyExecutor);
+        executors.add(watchExecutor);
 
         HttpServer server = startServer(exchange -> {
             requestCalls.incrementAndGet();
@@ -1066,13 +1066,13 @@ class StellMapClientTest {
         }, "/api/v1/registry/register");
 
         StellMapClientOptions options = options(server).toBuilder()
-                .nettyEventLoopOptions(NettyEventLoopOptions.builder()
+                .httpOptions(HttpOptions.builder()
                         .threads(1)
-                        .executor(nettyExecutor)
+                        .executor(watchExecutor)
                         .build())
                 .build();
 
-        try (StellMapClient client = new StellMapClient(options, null, OpenTelemetry.noop())) {
+        try (StellMapClient client = new StellMapClient(options, OpenTelemetry.noop())) {
             StarMapResponse<Void> response = client.register(RegisterRequest.builder()
                     .namespace("prod")
                     .service("order-service")

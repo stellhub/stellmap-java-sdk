@@ -50,8 +50,8 @@ public class StellMapClientOptions {
     /** 可选外部心跳定时线程池。 */
     private ScheduledExecutorService heartbeatExecutor;
 
-    /** 可选 Netty EventLoopGroup 高级配置。 */
-    private NettyEventLoopOptions nettyEventLoopOptions;
+    /** 可选 watch 运行时高级配置，保留字段名仅用于兼容历史版本。 */
+    private HttpOptions httpOptions;
 
     /** 默认附加请求头。 */
     @Builder.Default private Map<String, String> defaultHeaders = new LinkedHashMap<>();

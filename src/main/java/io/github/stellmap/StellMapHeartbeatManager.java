@@ -29,7 +29,7 @@ final class StellMapHeartbeatManager {
                     .constructParametricType(StarMapResponse.class, Void.class);
 
     private final URI baseUri;
-    private final NettyHttpTransport transport;
+    private final HttpTransport transport;
     private final ScheduledExecutorService heartbeatExecutor;
     private final boolean ownsHeartbeatExecutor;
     private final StarMapClientMetrics metrics;
@@ -41,7 +41,7 @@ final class StellMapHeartbeatManager {
 
     StellMapHeartbeatManager(
             URI baseUri,
-            NettyHttpTransport transport,
+            HttpTransport transport,
             ScheduledExecutorService heartbeatExecutor,
             boolean ownsHeartbeatExecutor,
             StarMapClientMetrics metrics,
